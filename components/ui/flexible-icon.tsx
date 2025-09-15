@@ -94,7 +94,7 @@ export function FlexibleIcon({
   lightColor,
   darkColor,
   strokeWidth = 1.8,
-}: FlexibleIconProps) {
+}: Readonly<FlexibleIconProps>) {
   const themedColor = useThemeColor(
     { light: lightColor, dark: darkColor },
     'icon'
