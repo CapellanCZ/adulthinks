@@ -45,7 +45,7 @@ interface SignupFormState {
   // Data Actions
   setAccountData: (data: Partial<AccountData>) => void;
   setPersonalData: (data: Partial<PersonalData>) => void;
-  setAddressData: (data: UserAddress) => void;
+  setAddressData: (data: Partial<UserAddress>) => void;
   
   // Validation
   validateAccountStep: () => boolean;
@@ -147,8 +147,20 @@ export const useSignupFormStore = create<SignupFormState>()(
 
     setAddressData: (data) =>
       set((state) => {
-        state.addressData = data;
-        state.completedSteps[2] = true;
+        // Initialize addressData if it's null
+        state.addressData ??= {};
+        
+        // Merge the partial data with existing address data
+        Object.assign(state.addressData, data);
+        
+        // Mark address step as complete if we have required fields
+        const hasRequired = 
+          state.addressData.street && 
+          state.addressData.barangay && 
+          state.addressData.city && 
+          state.addressData.zipCode;
+        state.completedSteps[2] = !!hasRequired;
+        
         state.submitError = null;
       }),
 
@@ -178,12 +190,11 @@ export const useSignupFormStore = create<SignupFormState>()(
 
     validateAddressStep: () => {
       const { addressData } = get();
-      return (
-        addressData !== null &&
-        addressData.street !== undefined && addressData.street.length > 0 &&
-        addressData.barangay !== undefined && addressData.barangay.length > 0 &&
-        addressData.city !== undefined && addressData.city.length > 0 &&
-        addressData.zipCode !== undefined && addressData.zipCode.length > 0
+      return Boolean(
+        addressData?.street && addressData.street.length > 0 &&
+        addressData?.barangay && addressData.barangay.length > 0 &&
+        addressData?.city && addressData.city.length > 0 &&
+        addressData?.zipCode && addressData.zipCode.length > 0
       );
     },
 
@@ -213,7 +224,7 @@ export const useSignupFormStore = create<SignupFormState>()(
 
         console.log('Submitting signup data:', signupData);
         
-        // TODO: Replace with actual API call
+        // API integration planned - currently simulating successful signup
         await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
         
         // On success, could navigate to success screen

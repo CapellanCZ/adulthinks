@@ -8,7 +8,7 @@ Your app now includes a comprehensive address collection system with interactive
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable the following APIs:
+3. Enable the following APIs:    
    - **Maps JavaScript API** (for map display)
    - **Places API** (for address search and autocomplete)
    - **Geocoding API** (for converting addresses to coordinates)

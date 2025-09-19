@@ -1,245 +1,165 @@
+import { router } from "expo-router";
+import { EyeOff, User } from "lucide-react-native";
 import React from "react";
-import { Alert, Pressable, StyleSheet } from "react-native";
-import { ProgressStep, ProgressSteps } from "react-native-progress-steps";
+import { Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
+import { ExpoIcons } from "@/components/ui/flexible-icon";
 import { Input } from "@/components/ui/input";
-import { Picker } from "@/components/ui/picker";
-import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
-import { useSignupFormStore } from "@/stores/useSignupFormStore";
 
-import type { UserAddress } from "@/modules/userAddress/types/AddressTypes";
 export default function SignupScreen() {
-  // Store hooks for managing form state
-  const {
-    activeStep,
-    accountData,
-    personalData,
-    submitError,
-    setAccountData,
-    setPersonalData,
-    setAddressData,
-    validateAccountStep,
-    validatePersonalStep,
-    submitSignupForm,
-  } = useSignupFormStore();
-
-  const sexOptions = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Other", value: "other" },
-  ];
-
-  // Handle address completion
-  const handleAddressComplete = (address: UserAddress) => {
-    setAddressData(address);
-    console.log("Address completed:", address);
-
-    // Automatically submit the form or navigate to success
-    if (validateAccountStep() && validatePersonalStep() && address) {
-      submitSignupForm();
-    }
-  };
-
-  // Handle address step back navigation
-  const handleAddressBack = () => {
-    // Could go back to personal step if needed
-    console.log("Address step back pressed");
-  };
-
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {submitError && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{submitError}</Text>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        padding: 20,
+      }}
+    >
+      {/* Main Content - Centered */}
+      <View style={{ flex: 1, justifyContent: "center", paddingBottom: "12%" }}>
+        {/* Header */}
+        <View
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            marginBottom: 40,
+          }}
+        >
+          <View style={styles.iconCircle}>
+            <User size={40} color="#666" />
+          </View>
+          <Text variant="heading" style={{ marginBottom: 10 }}>
+            Create Account
+          </Text>
+          <Text variant="caption">Enter your details and register</Text>
         </View>
-      )}
-    
-      <View style={{ flex: 1 }}>
-        <ProgressSteps activeStep={activeStep} >
-          <ProgressStep label="Account" buttonNextText="Continue">
-            <View style={{ marginBottom: 25, alignItems: "center", gap: 10 }}>
-              <Text variant="heading">Create Account</Text>
-              <Text variant="caption" style={{ textAlign: "center" }}>
-                Follow the steps to complete your registration and to get you
-                started.
-              </Text>
-              <Separator style={{ marginTop: 15, opacity: 0.5 }} />
-            </View>
-            <View style={styles.progressStepContainer}>
-              <Input
-                variant="outline"
-                placeholder="Enter your email"
-                value={accountData.email}
-                onChangeText={(email) => setAccountData({ email })}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Input
-                variant="outline"
-                placeholder="Enter your password"
-                value={accountData.password}
-                onChangeText={(password) => setAccountData({ password })}
-                secureTextEntry
-              />
-              <Input
-                variant="outline"
-                placeholder="Confirm your password"
-                value={accountData.confirmPassword}
-                onChangeText={(confirmPassword) =>
-                  setAccountData({ confirmPassword })
-                }
-                secureTextEntry
-              />
 
-              {/* Validation hints */}
-              {accountData.password && accountData.password.length < 8 ? (
-                <Text style={styles.hintText}>
-                  Password must be at least 8 characters
-                </Text>
-              ) : null}
-              {accountData.password &&
-              accountData.confirmPassword &&
-              accountData.password !== accountData.confirmPassword ? (
-                <Text style={styles.hintText}>Passwords do not match</Text>
-              ) : null}
-            </View>
-            <View style={{ marginTop: 15, paddingHorizontal: 5, opacity: 0.7 }}>
-              <Text
-                style={{ textAlign: "center", fontSize: 12, color: "#666" }}
-              >
-                By clicking &quot;Continue...&quot; you agree to
-                <Text style={{ fontSize: 12, color: "#666" }}> our </Text>
-                <Pressable>
-                  <Text
-                    variant="link"
-                    style={{ fontSize: 12, color: "#585858ff" }}
-                  >
-                    Terms & Conditions
-                  </Text>
-                </Pressable>
-                <Text style={{ fontSize: 12, color: "#666" }}> and </Text>
-                <Pressable>
-                  <Text
-                    variant="link"
-                    style={{ fontSize: 12, color: "#585858ff" }}
-                  >
-                    Privacy Policy
-                  </Text>
-                </Pressable>
-              </Text>
-            </View>
-          </ProgressStep>
+        {/* Form Inputs */}
+        <View style={{ gap: 16 }}>
+          <Input
+            variant="outline"
+            placeholder="Enter your email"
+            autoComplete="email"
+            keyboardType="email-address"
+          />
 
-          <ProgressStep label="Personal">
-            <View style={{ marginBottom: 25, alignItems: "center", gap: 10 }}>
-              <Text variant="heading">About You</Text>
-              <Text variant="caption" style={{ textAlign: "center" }}>
-                We need some basic information about yourself.
-              </Text>
-              <Separator style={{ marginTop: 15, opacity: 0.5 }} />
-            </View>
-            <View style={styles.progressStepContainer}>
-              <Input
-                variant="outline"
-                placeholder="Enter your first name"
-                value={personalData.firstName}
-                onChangeText={(firstName) => setPersonalData({ firstName })}
-                autoCapitalize="words"
-              />
-              <Input
-                variant="outline"
-                placeholder="Enter your last name"
-                value={personalData.lastName}
-                onChangeText={(lastName) => setPersonalData({ lastName })}
-                autoCapitalize="words"
-              />
-              <Input
-                variant="outline"
-                placeholder="Enter your middle name (optional)"
-                value={personalData.middleName}
-                onChangeText={(middleName) => setPersonalData({ middleName })}
-                autoCapitalize="words"
-              />
-              <Picker
-                variant="outline"
-                options={sexOptions}
-                placeholder="Select your gender..."
-                value={personalData.gender}
-                onValueChange={(gender) => setPersonalData({ gender })}
-              />
-              <DatePicker
-                variant="outline"
-                label="Birthdate"
-                value={personalData.birthdate}
-                onChange={(birthdate) => setPersonalData({ birthdate })}
-                placeholder="Choose your birthdate"
-              />
-            </View>
-          </ProgressStep>
+          <Input
+            variant="outline"
+            placeholder="Enter your password"
+            keyboardType="visible-password"
+            secureTextEntry={true}
+            rightComponent={
+              <Pressable>
+                <EyeOff size={22} color="#888" />
+              </Pressable>
+            }
+          />
 
-          <ProgressStep label="Address">
-            <View style={{ marginBottom: 25, alignItems: "center", gap: 10 }}>
-              <Text variant="heading">Set Your Address</Text>
-              <Text variant="caption" style={{ textAlign: "center" }}>
-                Detailed address information helps us serve you better.
-              </Text>
-              <Separator style={{ marginTop: 15, opacity: 0.5 }} />
-            </View>
-            <View style={styles.progressStepContainer}>
-              <Input variant="outline" placeholder="House/Building Number" />
-              <Input variant="outline" placeholder="Street Name" />
-              <Input variant="outline" placeholder="Subdivision/Village" />
-              <Picker
-                variant="outline"
-                placeholder="Select your barangay..."
-                onValueChange={(barangay) => setAddressData({ barangay })}
-              />
-              <Picker
-                variant="outline"
-                placeholder="Select your city/municipality..."
-                onValueChange={(city) => setAddressData({ city })}
-              />
-              <Input variant="outline" placeholder="Zip Code" />
-            </View>
-          </ProgressStep>
-        </ProgressSteps>
+          <Input
+            variant="outline"
+            placeholder="Confirm your password"
+            keyboardType="visible-password"
+            secureTextEntry={true}
+            rightComponent={
+              <Pressable>
+                <EyeOff size={22} color="#888" />
+              </Pressable>
+            }
+          />
+        </View>
+
+        {/* Sign Up Button */}
+        <Button style={{ marginTop: 40, marginBottom: 30 }}>Register</Button>
+
+        {/* Separator */}
+        <View style={styles.separatorContainer}>
+          <View style={styles.separatorLine} />
+          <Text style={styles.separatorText}>Or continue with</Text>
+          <View style={styles.separatorLine} />
+        </View>
+
+        {/* Social Login Buttons */}
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <Button
+            flexibleIcon={ExpoIcons.fontAwesome("google")}
+            variant="outline"
+            style={{ flex: 1 }}
+          >
+            Google
+          </Button>
+          <Button
+            flexibleIcon={ExpoIcons.fontAwesome("apple")}
+            variant="outline"
+            style={{ flex: 1 }}
+          >
+            Apple
+          </Button>
+        </View>
       </View>
+
+      {/* Terms and Conditions - Bottom */}
+      <View style={styles.signupContainer}>
+        <Text style={{ fontSize: 13, color: "#666" }}>
+          By clicking &apos;Register&apos; you agree to our{" "}
+        </Text>
+        <View style={{ flexDirection: "row" }}>
+          <Pressable>
+            <Text style={{ fontSize: 13, color: "#666" }} variant="link">
+              Terms & Conditions
+            </Text>
+          </Pressable>
+          <Text style={{ fontSize: 13, color: "#666" }}> and </Text>
+          <Pressable>
+            <Text style={{ fontSize: 13, color: "#666" }} variant="link">
+              Privacy Policy
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <AvoidKeyboard />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  progressStepContainer: {
+  iconCircle: {
+    width: 75,
+    height: 75,
+    borderRadius: 40,
+    backgroundColor: "#f7f7f7ff",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+    marginBottom: 25,
   },
-  addressStepContainer: {
+  separatorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  separatorLine: {
     flex: 1,
-    paddingHorizontal: 0, // AddressStep manages its own padding
+    height: 1,
+    backgroundColor: "#e0e0e0",
   },
-  errorContainer: {
-    backgroundColor: "#ffebee",
-    padding: 12,
-    marginHorizontal: 20,
-    marginBottom: 10,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: "#f44336",
-  },
-  errorText: {
-    color: "#c62828",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  hintText: {
-    fontSize: 12,
+  separatorText: {
+    marginHorizontal: 16,
+    fontSize: 15,
     color: "#666",
-    fontStyle: "italic",
-    textAlign: "center",
+  },
+  signupContainer: {
+    position: "absolute",
+    bottom: "3%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    opacity: 0.8,
   },
 });

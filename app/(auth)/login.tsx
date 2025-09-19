@@ -1,11 +1,13 @@
 import { router } from "expo-router";
-import { Eye, EyeOff, AlertCircle } from "lucide-react-native";
+import { AlertCircle, Eye, EyeOff } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ExpoIcons } from "@/components/ui/flexible-icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
@@ -14,7 +16,6 @@ import { ForgotPasswordBottomSheet } from "@/modules/auth/components/ForgotPassw
 import { useAuthStore } from "../../modules/auth/store/useAuthStore";
 import { useLoginFormStore } from "../../modules/auth/store/useLoginFormStore";
 import { usePasswordResetStore } from "../../modules/auth/store/usePasswordResetStore";
-import { ExpoIcons } from "@/components/ui/flexible-icon";
 
 export default function LoginScreen() {
   // Zustand stores
@@ -96,7 +97,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View
+    <SafeAreaView
       style={{
         flex: 1,
         padding: 20,
@@ -113,10 +114,10 @@ export default function LoginScreen() {
           }}
         >
           <Text variant="heading" style={{ marginBottom: 10 }}>
-            Welcome
+            Welcome Back!
           </Text>
           <Text variant="caption">
-            Please enter your credentials to continue.
+            Please enter your credentials to log in.
           </Text>
         </View>
 
@@ -218,7 +219,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Social Login Buttons */}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flexDirection: "row", gap: 12 }}>
           <Button
             flexibleIcon={ExpoIcons.fontAwesome("google")}
             variant="outline"
@@ -249,7 +250,7 @@ export default function LoginScreen() {
       </View>
 
       <AvoidKeyboard />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    paddingBottom: 40,
+    paddingBottom: "10%",
     backgroundColor: "white",
   },
 });

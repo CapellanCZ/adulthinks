@@ -1,14 +1,14 @@
 import * as yup from 'yup';
-import { CAVITE_CITIES, CAVITE_ZIP_CODES } from '../types/AddressTypes';
+import { CAVITE_CITIES as LOCATION_DATA, getBarangaysForCity, getZipCodeForCity } from '../data/PhilippineLocations';
 
 // Philippine ZIP code regex pattern
 const PHILIPPINE_ZIP_REGEX = /^\d{4}$/;
 
 // Street name validation regex (allows letters, numbers, spaces, common punctuation)
-const STREET_NAME_REGEX = /^[a-zA-Z0-9\s\.\-\,\'\#\/]+$/;
+const STREET_NAME_REGEX = /^[a-zA-Z0-9\s.,'#/-]+$/;
 
 // House number validation regex (flexible format)
-const HOUSE_NUMBER_REGEX = /^[a-zA-Z0-9\s\.\-\#\/]+$/;
+const HOUSE_NUMBER_REGEX = /^[a-zA-Z0-9\s.#/-]+$/;
 
 // Base validation schema for Philippine addresses
 export const philippineAddressSchema = yup.object({
@@ -35,13 +35,33 @@ export const philippineAddressSchema = yup.object({
   barangay: yup
     .string()
     .required('Barangay is required')
-    .min(2, 'Barangay name must be at least 2 characters')
-    .max(100, 'Barangay name must be 100 characters or less'),
+    .test(
+      'valid-barangay-for-city',
+      'Please select a valid barangay for the selected city',
+      function(value) {
+        if (!value) return false;
+        
+        const { city } = this.parent;
+        if (!city) return true; // Will be caught by city validation
+        
+        // Get valid barangays for the selected city from our location data
+        const validBarangays = getBarangaysForCity(city);
+        return validBarangays.some(b => b.value === value);
+      }
+    ),
 
   city: yup
     .string()
     .required('City is required')
-    .oneOf(CAVITE_CITIES as readonly string[], 'Please select a valid city in Cavite'),
+    .test(
+      'valid-cavite-city',
+      'Please select a valid city in Cavite',
+      (value) => {
+        if (!value) return false;
+        // Use our comprehensive location data for validation
+        return LOCATION_DATA.some(city => city.value === value);
+      }
+    ),
 
   province: yup
     .string()
@@ -52,14 +72,15 @@ export const philippineAddressSchema = yup.object({
     .string()
     .required('ZIP code is required')
     .matches(PHILIPPINE_ZIP_REGEX, 'ZIP code must be 4 digits')
-    .test('valid-cavite-zip', 'Invalid ZIP code for selected city', function(value) {
+    .test('valid-cavite-zip', 'ZIP code does not match the selected city', function(value) {
       if (!value) return true; // Let required validation handle empty values
       
       const { city } = this.parent;
       if (!city) return true; // Can't validate ZIP without city
       
-      const validZips = CAVITE_ZIP_CODES[city];
-      return validZips ? validZips.includes(value) : false;
+      // Use our location data for accurate ZIP code validation
+      const expectedZipCode = getZipCodeForCity(city);
+      return expectedZipCode === value;
     }),
 
   landmark: yup
@@ -171,9 +192,10 @@ export const isAddressComplete = (addressData: any): boolean => {
   );
 };
 
-// ZIP code suggestion based on city
+// ZIP code suggestion based on city using our location data
 export const suggestZipCodesForCity = (city: string): string[] => {
-  return CAVITE_ZIP_CODES[city] || [];
+  const zipCode = getZipCodeForCity(city);
+  return zipCode ? [zipCode] : [];
 };
 
 // Address formatting utility

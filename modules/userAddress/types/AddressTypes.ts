@@ -12,8 +12,6 @@ export interface UserAddress {
   city?: string;
   province?: string;
   zipCode?: string;
-  landmark?: string;
-  addressNotes?: string;
   latitude?: number;
   longitude?: number;
   formattedAddress?: string;
@@ -38,8 +36,6 @@ export interface AddressValidationErrors {
   city?: string;
   province?: string;
   zipCode?: string;
-  landmark?: string;
-  addressNotes?: string;
   coordinates?: string;
 }
 
@@ -204,13 +200,6 @@ export const ADDRESS_FIELD_CONFIGS: AddressFieldConfig[] = [
     label: 'ZIP Code',
     placeholder: 'e.g., 4100',
     required: true,
-    type: 'text',
-  },
-  {
-    id: 'landmark',
-    label: 'Landmark (Optional)',
-    placeholder: 'e.g., Near SM Bacoor, Beside 7-Eleven',
-    required: false,
     type: 'text',
   },
 ];
