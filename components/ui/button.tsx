@@ -1,5 +1,4 @@
 import { Icon } from '@/components/ui/icon';
-import { FlexibleIcon, FlexibleIconConfig, createLucideIcon } from '@/components/ui/flexible-icon';
 import { ButtonSpinner, SpinnerVariant } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -37,10 +36,7 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
   children?: React.ReactNode;
   animation?: boolean;
   haptic?: boolean;
-  // Legacy Lucide icon support (for backward compatibility)
   icon?: React.ComponentType<LucideProps>;
-  // New flexible icon support (Lucide + Expo icons)
-  flexibleIcon?: FlexibleIconConfig;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -56,7 +52,6 @@ export const Button = forwardRef<View, ButtonProps>(
     {
       children,
       icon,
-      flexibleIcon,
       onPress,
       variant = 'default',
       size = 'default',
@@ -204,33 +199,6 @@ export const Button = forwardRef<View, ButtonProps>(
       }
     };
 
-    // Helper function to render the appropriate icon
-    const renderIcon = () => {
-      const iconSize = getIconSize();
-      
-      // Priority: flexibleIcon > icon (legacy)
-      if (flexibleIcon) {
-        return (
-          <FlexibleIcon
-            icon={flexibleIcon}
-            size={iconSize}
-            color={contentColor}
-          />
-        );
-      }
-      
-      if (icon) {
-        return (
-          <Icon name={icon} color={contentColor} size={iconSize} />
-        );
-      }
-      
-      return null;
-    };
-
-    // Check if any icon is provided
-    const hasIcon = Boolean(flexibleIcon || icon);
-
     // Trigger haptic feedback
     const triggerHapticFeedback = () => {
       if (haptic && !disabled && !loading) {
@@ -354,6 +322,7 @@ export const Button = forwardRef<View, ButtonProps>(
     const buttonStyle = getButtonStyle();
     const finalTextStyle = getButtonTextStyle();
     const contentColor = getColor();
+    const iconSize = getIconSize();
     const styleWithoutFlex = getStyleWithoutFlex();
 
     return animation ? (
@@ -377,14 +346,18 @@ export const Button = forwardRef<View, ButtonProps>(
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              {hasIcon && renderIcon()}
+              {icon && (
+                <Icon name={icon} color={contentColor} size={iconSize} />
+              )}
               <Text style={[finalTextStyle, textStyle]}>{children}</Text>
             </View>
           ) : (
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              {hasIcon && renderIcon()}
+              {icon && (
+                <Icon name={icon} color={contentColor} size={iconSize} />
+              )}
               {children}
             </View>
           )}
@@ -407,14 +380,11 @@ export const Button = forwardRef<View, ButtonProps>(
           />
         ) : typeof children === 'string' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {hasIcon && renderIcon()}
+            {icon && <Icon name={icon} color={contentColor} size={iconSize} />}
             <Text style={[finalTextStyle, textStyle]}>{children}</Text>
           </View>
         ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {hasIcon && renderIcon()}
-            {children}
-          </View>
+          children
         )}
       </TouchableOpacity>
     );

@@ -1,39 +1,32 @@
-import React from "react";
-import * as Haptics from "expo-haptics";
-import { Bell } from "lucide-react-native";
-import { Dimensions, Pressable, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import * as Haptics from 'expo-haptics';
+import { Banknote, Bell, Calendar, MapPin, TrendingDown, TrendingUp } from 'lucide-react-native';
+import React from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollView } from "@/components/ui/scroll-view";
-import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { useThemeColor } from "@/hooks/useThemeColor";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Carousel, CarouselItem } from "@/components/ui/carousel";
-import { GovernmentIdCard } from "@/components/ui/government-id-card-simple";
-import { PHILIPPINE_GOVERNMENT_IDS } from "@/data/philippine-government-ids";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Carousel, CarouselItem } from '@/components/ui/carousel';
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-  ComboboxValue,
-  OptionType,
-} from "@/components/ui/combobox";
-
-const { width } = Dimensions.get("window");
+  Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList,
+  ComboboxTrigger, ComboboxValue, OptionType
+} from '@/components/ui/combobox';
+import { GovernmentIdCard } from '@/components/ui/government-id-card';
+import { ScrollView } from '@/components/ui/scroll-view';
+import { Separator } from '@/components/ui/separator';
+import { Text } from '@/components/ui/text';
+import { View } from '@/components/ui/view';
+import { PHILIPPINE_GOVERNMENT_IDS } from '@/data/philippine-government-ids';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 export default function HomeScreen() {
-  const bottom = useBottomTabBarHeight();
-  const router = useRouter();
-
-  const [selectedGovernmentId, setSelectedGovernmentId] = React.useState<OptionType | null>(null);
-
   const primaryColor = useThemeColor({}, "primary");
+  const tipTextColor = useThemeColor({}, "text");
+  const trendingTextColor = useThemeColor({}, "text");
+  const bottom = useBottomTabBarHeight();
+
+  const [selectedGovernmentId, setSelectedGovernmentId] =
+    React.useState<OptionType | null>(null);
 
   const handleNotificationPress = async () => {
     // Haptic feedback
@@ -42,24 +35,17 @@ export default function HomeScreen() {
     console.log("Notification button pressed");
   };
 
-  const handleIdCardPress = async (idData: any) => {
-    // Haptic feedback
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Navigate to ID card details screen
-    router.push({
-      pathname: '/id-card-details',
-      params: {
-        id: idData.id,
-        title: idData.title,
-        subtitle: idData.subtitle || '',
-      }
-    });
-  };
-
+  // TODO: Implement notification, government ID selection and other functionalities
+  // TODO: Add navigation to detailed pages
+  // TODO: Maintainability, Scalability, Performance, & Separation of Concerns
+  // TODO: Refactor large component into smaller, manageable pieces
+  // TODO: Separate UI and business logic
+  // TODO: optimize styling and theming consistency
+  
   return (
     <ScrollView
-      style={styles.scrollView}
-      contentContainerStyle={{ paddingBottom: bottom }}
+      style={[styles.scrollView, { paddingHorizontal: 20 }]}
+      contentContainerStyle={{ paddingBottom: bottom + 35 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
@@ -102,15 +88,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Government ID Selection */}
-      <View style={styles.gettingStartedSection}>
-       
-        <Combobox 
-          value={selectedGovernmentId} 
+      <View style={{ marginBottom: 20 }}>
+        <Combobox
+          value={selectedGovernmentId}
           onValueChange={setSelectedGovernmentId}
         >
           <ComboboxTrigger>
-            <ComboboxValue placeholder="Select government ID..." />
+            <ComboboxValue placeholder="Select government ID  ..." />
           </ComboboxTrigger>
           <ComboboxContent>
             <ComboboxInput placeholder="Search government IDs..." />
@@ -120,15 +104,23 @@ export default function HomeScreen() {
                 <ComboboxItem
                   key={govId.id}
                   value={govId.id}
-                  searchValue={`${govId.title} ${govId.subtitle || ''}`}
+                  searchValue={`${govId.title} ${govId.subtitle || ""}`}
                 >
-                  <View>
-                    <Text style={{ fontWeight: '500' }}>{govId.title}</Text>
-                    {govId.subtitle && (
-                      <Text variant="caption" style={{ opacity: 0.6, marginTop: 2 }}>
-                        {govId.subtitle}
-                      </Text>
-                    )}
+                  <View style={styles.comboboxItemContent}>
+                    <View style={styles.comboboxItemInfo}>
+                      <Text style={{ fontWeight: "500" }}>{govId.title}</Text>
+                      {govId.subtitle && (
+                        <Text
+                          variant="caption"
+                          style={{ opacity: 0.6, marginTop: 2 }}
+                        >
+                          {govId.subtitle}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.processingBadge}>
+                      <Text style={styles.badgeText}>5-7 days</Text>
+                    </View>
                   </View>
                 </ComboboxItem>
               ))}
@@ -137,46 +129,219 @@ export default function HomeScreen() {
         </Combobox>
       </View>
 
-      {/* Philippine Government IDs Section */}
-      <View style={styles.cardsSection}>
-        <Text variant="title" style={styles.sectionTitle}>
-          Philippine Government IDs
-        </Text>
-        <Text variant="caption" style={styles.sectionSubtitle}>
-          Swipe to explore different government-issued identification cards
-        </Text>
+      {/* Tips Card*/}
+      <View style={{ marginBottom: 20 }}>
+        <View>
+          <Text variant="title">Essential Tips</Text>
+          <Text
+            variant="caption"
+            style={{
+              opacity: 0.7,
+              marginBottom: 7,
+            }}
+          >
+            Ensure a smooth application process
+          </Text>
+        </View>
+        <Card style={styles.tipsCard}>
+          <CardContent>
+            {[
+              {
+                icon: <Calendar size={16} color={primaryColor} />,
+                text: "Book online to avoid long queues.",
+              },
+              {
+                icon: <MapPin size={16} color={primaryColor} />,
+                text: "Check office locations & hours beforehand.",
+              },
+              {
+                icon: <Banknote size={16} color={primaryColor} />,
+                text: "Processing fees range from ₱150-₱500.",
+              },
+            ].map((tip, idx) => (
+              <React.Fragment key={idx}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  {tip.icon}
+                  <Text style={[styles.tipText, { color: tipTextColor }]}>
+                    {tip.text}
+                  </Text>
+                </View>
+                {idx < 2 && (
+                  <Separator style={{ marginVertical: 8, opacity: 0.3 }} />
+                )}
+              </React.Fragment>
+            ))}
+          </CardContent>
+        </Card>
+      </View>
 
+      {/* Popular Section */}
+      <View>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 3,
+          }}
+        >
+          <View>
+            <Text variant="title">Popular</Text>
+            <Text
+              variant="caption"
+              style={{
+                opacity: 0.7,
+                marginBottom: 10,
+              }}
+            >
+              Most applied government IDs
+            </Text>
+          </View>
+          <Pressable onPress={() => console.log("See All pressed")}>
+            <Text variant="link" style={{ fontSize: 14 }}>
+              See All
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Carousel of Government ID Cards */}
         <Carousel
           showIndicators={true}
           showArrows={true}
           autoPlay={true}
           loop={true}
+          style={{ top: -23, marginBottom: -10 }}
         >
-          {PHILIPPINE_GOVERNMENT_IDS.map((idData, index) => (
-            <CarouselItem key={idData.id}>
-              <Pressable
-                onPress={() => handleIdCardPress(idData)}
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.8 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                })}
-              >
-                <GovernmentIdCard data={idData} />
-              </Pressable>
-            </CarouselItem>
-          ))}
+          <CarouselItem
+            style={{
+              paddingHorizontal: -10,
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          >
+            <GovernmentIdCard data={PHILIPPINE_GOVERNMENT_IDS[0]} />
+          </CarouselItem>
+          <CarouselItem
+            style={{
+              paddingHorizontal: -10,
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          >
+            <GovernmentIdCard data={PHILIPPINE_GOVERNMENT_IDS[1]} />
+          </CarouselItem>
+          <CarouselItem
+            style={{
+              paddingHorizontal: -10,
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          >
+            <GovernmentIdCard data={PHILIPPINE_GOVERNMENT_IDS[2]} />
+          </CarouselItem>
         </Carousel>
-
-        <Text variant="caption" style={styles.carouselHint}>
-          Tap any card to view details
-        </Text>
       </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text variant="caption" style={styles.footerText}>
-          Built with ❤️ for Expo, React Native developers by BNA
-        </Text>
+      
+      {/* Trending Section */}
+      <View style={{ marginBottom: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View>
+            <Text variant="title">Trending</Text>
+            <Text
+              variant="caption"
+              style={{
+                opacity: 0.7,
+              }}
+            >
+              Hot topics and discussions
+            </Text>
+          </View>
+          <Pressable onPress={() => console.log("See All pressed")}>
+            <Text variant="link" style={{ fontSize: 14 }}>
+              See All
+            </Text>
+          </Pressable>
+        </View>
+        <Card style={{ borderRadius: 10, marginTop: 8 }}>
+          <CardContent>
+            {[
+              {
+                title: "How to get your National ID fast",
+                description: "Tips and requirements for a smooth application.",
+                trend: "up",
+              },
+              {
+                title: "SSS ID for first-time job seekers",
+                description: "Why you need it and how to apply.",
+                trend: "down",
+              },
+              {
+                title: "Postal ID: The easiest valid ID?",
+                description: "Step-by-step guide for young adults.",
+                trend: "up",
+              },
+            ].map((topic, idx) => (
+              <View key={idx} style={{ marginBottom: idx < 2 ? 16 : 0 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center", // Changed from "flex-start" to "center"
+                    gap: 15,
+                  }}
+                >
+                  <View
+                    style={{
+                      justifyContent: "center", // Center the icon vertically
+                      alignItems: "center", // Center the icon horizontally
+                      minHeight: 20, // Ensure consistent height
+                    }}
+                  >
+                    {topic.trend === "up" ? (
+                      <TrendingUp size={18} color={primaryColor} />
+                    ) : (
+                      <TrendingDown size={18} color={primaryColor} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontWeight: "600",
+                        color: trendingTextColor,
+                        fontSize: 15,
+                      }}
+                    >
+                      {topic.title}
+                    </Text>
+                    <Text
+                      variant="caption"
+                      style={{
+                        marginTop: 2,
+                        fontSize: 13,
+                      }}
+                    >
+                      {topic.description}
+                    </Text>
+                  </View>
+                </View>
+                {idx < 2 && (
+                  <Separator style={{ marginVertical: 10, opacity: 0.1 }} />
+                )}
+              </View>
+            ))}
+          </CardContent>
+        </Card>
       </View>
     </ScrollView>
   );
@@ -188,8 +353,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 64,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 15,
   },
   headerContent: {
     flexDirection: "row",
@@ -212,160 +376,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  progressSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  tipsCard: {
+    borderRadius: 10,
   },
-  progressCard: {
-    overflow: "hidden",
-  },
-  progressContent: {
+  comboboxItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    width: "100%",
   },
-  leftColumn: {
+  comboboxItemInfo: {
     flex: 1,
-    paddingRight: 20,
-    justifyContent: "center",
+    marginRight: 12,
   },
-  rightColumn: {
+  processingBadge: {
+    backgroundColor: "#e3f2fd",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 60,
     alignItems: "center",
-    justifyContent: "center",
   },
-  progressChartContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#1976d2",
   },
-  progressTextOverlay: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressPercentage: {
-    fontSize: 24,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  progressLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    textAlign: "center",
-  },
-  viewCardsButton: {
-    width: "100%",
-  },
-  // Philippine Government IDs Section Styles
-  cardsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  sectionSubtitle: {
+  tipText: {
+    flex: 1,
     fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 20,
     lineHeight: 20,
-  },
-  cardPressable: {
-    borderRadius: 16,
-    overflow: "hidden",
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  carouselHint: {
-    textAlign: "center",
-    marginTop: 16,
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  heroSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-    alignItems: "center",
-    textAlign: "center",
-  },
-  heroTitle: {
-    fontSize: 36,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  heroSubtitle: {
-    textAlign: "center",
-    marginBottom: 16,
-    opacity: 0.8,
-  },
-  heroDescription: {
-    textAlign: "center",
-    lineHeight: 24,
-    maxWidth: width - 80,
-  },
-  actionButtons: {
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 40,
-  },
-  gettingStartedSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  gettingStartedCard: {
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  terminalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  terminalTitle: {
-    fontWeight: "600",
-  },
-  codeBlock: {
-    backgroundColor: "#1a1a1a",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    minWidth: "100%",
-  },
-  bashCommand: {
-    fontFamily: "monospace",
-    // color: '#00ff00',
-    fontSize: 16,
-    textAlign: "center",
-  },
-  installDescription: {
-    textAlign: "center",
-    opacity: 0.7,
-  },
-  gettingStartedText: {
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  gettingStartedButton: {
-    alignSelf: "center",
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  footerText: {
-    textAlign: "center",
-    fontSize: 14,
+    color: "#334155",
   },
 });
