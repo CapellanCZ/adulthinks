@@ -22,7 +22,7 @@ import {
 } from 'lucide-react-native';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function ExploreScreen() {
+export default function CommunityScreen() {
   const router = useRouter();
   const bottom = useBottomTabBarHeight();
 

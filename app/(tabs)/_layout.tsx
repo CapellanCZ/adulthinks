@@ -4,7 +4,7 @@ import { PlatformPressable } from '@react-navigation/elements';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { Home, Stars } from 'lucide-react-native';
+import { Home, MessagesSquare, UserRound } from 'lucide-react-native';
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
@@ -62,11 +62,21 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name='explore'
+        name='community'
         options={{
-          title: 'Explore',
+          title: 'Community',
           tabBarIcon: ({ color }) => (
-            <Icon name={Stars} size={24} color={color} />
+            <Icon name={MessagesSquare} size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name='profile'
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <Icon name={UserRound} size={24} color={color} />
           ),
         }}
       />

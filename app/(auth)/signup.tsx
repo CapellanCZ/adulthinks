@@ -11,6 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
 
+// TODO: Implement signup logic and form state management 
+// TODO: Add validation and error handling
+// TODO: Integrate with backend API for user registration
+// TODO: Add social login functionality
+// TODO: Add loading states and feedback for user actions
+
 export default function SignupScreen() {
   return (
     <SafeAreaView
