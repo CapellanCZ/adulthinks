@@ -55,6 +55,7 @@
     "expo-updates": "~29.0.10"
   },
   "devDependencies": {
+    "@react-native-community/cli": "latest",
     "@babel/core": "^7.25.2",
     "@types/react": "19.1.13",
     "eslint": "^9.25.0",

@@ -1,6 +1,7 @@
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { LucideProps } from 'lucide-react-native';
 import React from 'react';
+import { Colors } from '@/theme/colors';
 
 // Import Expo Vector Icons
 import { 
@@ -95,14 +96,11 @@ export function FlexibleIcon({
   darkColor,
   strokeWidth = 1.8,
 }: Readonly<FlexibleIconProps>) {
-  const themedColor = useThemeColor(
-    { light: lightColor, dark: darkColor },
-    'icon'
-  );
-
-  // Use provided color prop if available, otherwise use themed color
-  const iconColor = color || themedColor;
-
+  // Get theme from useThemeColor
+  const theme = useThemeColor({}, 'background') === Colors.light.background ? 'light' : 'dark';
+  // Use Colors.icon for current theme, allow override
+  const themedColor = Colors[theme].icon;
+  const iconColor = color ?? themedColor;
   // Render based on icon type
   if (icon.type === 'lucide') {
     const LucideComponent = icon.component;

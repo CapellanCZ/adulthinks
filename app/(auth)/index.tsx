@@ -11,7 +11,7 @@ import { View } from "@/components/ui/view";
 // This is the initial screen for the (auth) group
 export default function AuthIndex() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <View style={{ flex: 1 }}>
         <View style={styles.imageContainer}>
           <Image

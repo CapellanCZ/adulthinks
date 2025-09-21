@@ -1,21 +1,21 @@
-import { router } from "expo-router";
-import { AlertCircle, Eye, EyeOff } from "lucide-react-native";
-import React, { useEffect } from "react";
-import { Pressable, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from 'expo-router';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
+import React, { useEffect } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ExpoIcons } from "@/components/ui/flexible-icon";
-import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
-import { View } from "@/components/ui/view";
-import { ForgotPasswordBottomSheet } from "@/modules/auth/components/ForgotPasswordBottomSheet";
+import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ExpoIcons, FlexibleIcon } from '@/components/ui/flexible-icon';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
+import { View } from '@/components/ui/view';
+import { ForgotPasswordBottomSheet } from '@/modules/auth/components/ForgotPasswordBottomSheet';
 
-import { useAuthStore } from "../../modules/auth/store/useAuthStore";
-import { useLoginFormStore } from "../../modules/auth/store/useLoginFormStore";
-import { usePasswordResetStore } from "../../modules/auth/store/usePasswordResetStore";
+import { useAuthStore } from '../../modules/auth/store/useAuthStore';
+import { useLoginFormStore } from '../../modules/auth/store/useLoginFormStore';
+import { usePasswordResetStore } from '../../modules/auth/store/usePasswordResetStore';
 
 export default function LoginScreen() {
   // Zustand stores
@@ -101,6 +101,7 @@ export default function LoginScreen() {
       style={{
         flex: 1,
         padding: 20,
+        backgroundColor: 'white',
       }}
     >
       {/* Main Content - Centered */}
@@ -220,19 +221,13 @@ export default function LoginScreen() {
 
         {/* Social Login Buttons */}
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <Button
-            flexibleIcon={ExpoIcons.fontAwesome("google")}
-            variant="outline"
-            style={{ flex: 1 }}
-          >
-            Google
+          <Button variant="outline" style={{ flex: 1 }}>
+            <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} />
+            <Text>Google</Text>
           </Button>
-          <Button
-            flexibleIcon={ExpoIcons.fontAwesome("apple")}
-            variant="outline"
-            style={{ flex: 1 }}
-          >
-            Apple
+          <Button variant="outline" style={{ flex: 1 }}>
+            <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} />
+            <Text>Apple</Text>
           </Button>
         </View>
       </View>

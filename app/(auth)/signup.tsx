@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
 import { Button } from "@/components/ui/button";
-import { ExpoIcons } from "@/components/ui/flexible-icon";
+import { ExpoIcons, FlexibleIcon } from "@/components/ui/flexible-icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
@@ -23,6 +23,7 @@ export default function SignupScreen() {
       style={{
         flex: 1,
         padding: 20,
+        backgroundColor: "white",
       }}
     >
       {/* Main Content - Centered */}
@@ -90,19 +91,13 @@ export default function SignupScreen() {
 
         {/* Social Login Buttons */}
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <Button
-            flexibleIcon={ExpoIcons.fontAwesome("google")}
-            variant="outline"
-            style={{ flex: 1 }}
-          >
-            Google
+          <Button variant="outline" style={{ flex: 1 }}>
+            <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} />
+            <Text>Google</Text>
           </Button>
-          <Button
-            flexibleIcon={ExpoIcons.fontAwesome("apple")}
-            variant="outline"
-            style={{ flex: 1 }}
-          >
-            Apple
+          <Button variant="outline" style={{ flex: 1 }}>
+            <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} />
+            <Text>Apple</Text>
           </Button>
         </View>
       </View>
