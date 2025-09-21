@@ -4,7 +4,7 @@ import { PlatformPressable } from '@react-navigation/elements';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { Home, MessagesSquare, UserRound } from 'lucide-react-native';
+import { Home, MessagesSquare, UserRound, MapPinned} from 'lucide-react-native';
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
@@ -67,6 +67,16 @@ export default function TabLayout() {
           title: 'Community',
           tabBarIcon: ({ color }) => (
             <Icon name={MessagesSquare} size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name='roadmap'
+        options={{
+          title: 'Roadmap',
+          tabBarIcon: ({ color }) => (
+            <Icon name={MapPinned} size={24} color={color} />
           ),
         }}
       />

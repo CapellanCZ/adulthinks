@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-export default function CommunityScreen() {
+export default function RoadMapScreen() {
   return (
     <View>
-      <Text>Community</Text>
+      <Text>roadmap</Text>
     </View>
   )
 }
