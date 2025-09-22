@@ -41,6 +41,7 @@ export interface UseSignupReturn {
   
   // Navigation
   navigateToLogin: () => void;
+  navigateBack: () => void;
   navigateToTerms: () => void;
   navigateToPrivacy: () => void;
 }
@@ -102,6 +103,10 @@ export const useSignup = (): UseSignupReturn => {
     router.push("/(auth)/login");
   }, []);
 
+  const navigateBack = useCallback(() => {
+    router.back();
+  }, []);
+
   const navigateToTerms = useCallback(() => {
     // TODO: Navigate to terms and conditions
     console.log("Navigate to terms");
@@ -151,6 +156,7 @@ export const useSignup = (): UseSignupReturn => {
     
     // Navigation
     navigateToLogin,
+    navigateBack,
     navigateToTerms,
     navigateToPrivacy,
   };

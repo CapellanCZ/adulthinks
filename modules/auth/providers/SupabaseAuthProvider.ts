@@ -18,23 +18,62 @@ export class SupabaseAuthProvider extends AuthProvider {
   ];
 
   async signInWithEmail(credentials: LoginCredentials): Promise<AuthResult> {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
-    });
-    
-    if (error) throw error;
-    if (!data.user) throw new Error("Authentication failed");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+      
+      if (error) {
+        console.error("Supabase login error:", error);
+        
+        // Convert email confirmation errors to invalid credentials message
+        // This prevents revealing that the email exists but isn't confirmed
+        if (error.message?.toLowerCase().includes("email not confirmed") ||
+            error.message?.toLowerCase().includes("not confirmed") ||
+            error.message?.toLowerCase().includes("confirm your email") ||
+            error.message?.toLowerCase().includes("email confirmation") ||
+            error.code === "email_not_confirmed") {
+          throw new Error("Please check your email.");
+        }
+        
+        // Convert authentication errors for existing accounts
+        if (error.message?.toLowerCase().includes("invalid login credentials") ||
+            error.message?.toLowerCase().includes("invalid credentials") ||
+            error.message?.toLowerCase().includes("wrong password") ||
+            error.code === "invalid_credentials") {
+          throw new Error("Invalid user credentials.");
+        }
+        
+        // For user not found errors, use different message
+        if (error.message?.toLowerCase().includes("user not found") ||
+            error.message?.toLowerCase().includes("no user found")) {
+          throw new Error("No account found with this email address. Please check your email or create a new account.");
+        }
+        
+        // Fallback for other errors
+        throw error;
+      }
+      
+      if (!data.user) throw new Error("Invalid user credentials.");
 
-    const user: AuthUser = {
-      id: data.user.id,
-      email: data.user.email!,
-      emailVerified: !!data.user.email_confirmed_at,
-      provider: "supabase",
-      metadata: data.user.user_metadata,
-    };
+      const user: AuthUser = {
+        id: data.user.id,
+        email: data.user.email!,
+        emailVerified: !!data.user.email_confirmed_at,
+        provider: "supabase",
+        metadata: data.user.user_metadata,
+      };
 
-    return { user, session: data.session };
+      return { user, session: data.session };
+    } catch (error: any) {
+      // Final catch to ensure we don't leak email confirmation status
+      if (error.message?.toLowerCase().includes("confirm") ||
+          error.message?.toLowerCase().includes("verification")) {
+        throw new Error("Invalid user credentials. Please check your email and password.");
+      }
+      throw error;
+    }
   }
 
   async signUpWithEmail(credentials: SignupCredentials): Promise<AuthResult> {
@@ -44,6 +83,11 @@ export class SupabaseAuthProvider extends AuthProvider {
         password: credentials.password,
         // No metadata needed for basic signup - names can be added later
       });
+      
+      // If signup returns a user but no session, it means user already exists
+      if (data?.user && !data?.session) {
+        throw new Error("An account with this email already exists");
+      }
 
       if (error) {
         console.error("Supabase signup error:", error);
@@ -61,9 +105,23 @@ export class SupabaseAuthProvider extends AuthProvider {
       
       if (!data.user) throw new Error("Registration failed");
       
-      // Additional check: if user exists but session is null, it might be a duplicate
-      if (data.user && !data.session && data.user.email_confirmed_at) {
+      // Check if this is actually a duplicate signup attempt
+      // Supabase sometimes returns user data even for existing users
+      if (data.user && !data.session) {
+        // If there's a user but no session, it's likely a duplicate
         throw new Error("An account with this email already exists");
+      }
+      
+      // Additional check: if user was created a while ago, it's a duplicate attempt
+      if (data.user && data.user.created_at) {
+        const createdAt = new Date(data.user.created_at);
+        const now = new Date();
+        const timeDiff = now.getTime() - createdAt.getTime();
+        
+        // If user was created more than 10 seconds ago, it's likely a duplicate
+        if (timeDiff > 10000) {
+          throw new Error("An account with this email already exists");
+        }
       }
 
       // Profile creation is handled automatically by the database trigger
@@ -80,7 +138,7 @@ export class SupabaseAuthProvider extends AuthProvider {
       };
 
       return { user, session: data.session };
-    } catch (error: any) {
+    } catch (error: any) {``
       console.error("Full signup error:", error);
       // Re-throw with more context
       throw new Error(`Database error saving new user: ${error.message || error}`);

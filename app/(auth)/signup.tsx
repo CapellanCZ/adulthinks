@@ -1,6 +1,6 @@
 import React from "react";
-import { StyleSheet } from "react-native";
-import { AlertCircle } from "lucide-react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
@@ -59,10 +59,23 @@ export default function SignupScreen() {
     // Navigation
     navigateToTerms,
     navigateToPrivacy,
+    navigateBack,
   } = useSignup();
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={navigateBack}
+          accessibilityLabel="Go back"
+          accessibilityHint="Returns to the previous screen"
+        >
+          <ArrowLeft size={24} color="#666" />
+        </TouchableOpacity>
+      </View>
+
       {/* Main Content - Centered */}
       <View style={styles.mainContent}>
         {/* Header Section */}
@@ -71,7 +84,7 @@ export default function SignupScreen() {
         {/* General Error Message */}
         {errors.general && (
           <View style={styles.errorContainer}>
-            <AlertCircle size={18} color="#dc2626" style={{ marginRight: 8 }} />
+            <AlertCircle size={18} color="#dc2626" style={styles.errorIcon} />
             <Text style={styles.errorText}>{errors.general}</Text>
           </View>
         )}
@@ -132,13 +145,24 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "white",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "transparent",
+    alignSelf: "flex-start",
   },
   mainContent: {
     flex: 1,
     justifyContent: "center",
     paddingBottom: "12%",
+    paddingHorizontal: 20,
     gap: 30,
   },
   submitButton: {
@@ -150,11 +174,18 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: -10,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+  },
+  errorIcon: {
+    marginRight: 8,
+    marginTop: 1,
+    flexShrink: 0,
   },
   errorText: {
     color: "#dc2626",
     fontSize: 14,
     fontWeight: "500",
+    flex: 1,
+    lineHeight: 20,
   },
 });

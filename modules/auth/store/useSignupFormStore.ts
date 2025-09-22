@@ -199,7 +199,7 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
         set({
           loading: false,
           errors: {
-            email: "An account with this email already exists. Please use a different email or try logging in.",
+            general: "An account with this email already exists. Please use a different email or try logging in.",
           },
         });
         return { success: false, error: "Email already exists" };
