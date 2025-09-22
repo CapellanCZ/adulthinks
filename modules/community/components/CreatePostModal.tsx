@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Pressable,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useCommunityStyles } from '../styles/communityStyles';
 import { useCommunityStore } from '../store/useCommunityStore';
 import { createPostSchema } from '../validation/communitySchema';
 import { CAVITE_ID_HASHTAGS } from './HashtagFilter';
+import { useDraftPost } from '../hooks/useDraftPost';
+import type { Post } from '../types';
 
 interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
+  editPost?: Post;
 }
 
-export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
+export function CreatePostModal({ visible, onClose, editPost }: CreatePostModalProps) {
   const styles = useCommunityStyles();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -31,17 +37,99 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDraftAlert, setShowDraftAlert] = useState(false);
   
-  const { createPost } = useCommunityStore();
+  const { createPost, editPost: updatePost } = useCommunityStore();
+  const { draft, autoSaveDraft, clearDraft, hasDraft, formatDraftAge } = useDraftPost();
+  
+  const isEditing = !!editPost;
+  
+  const slideAnim = React.useRef(new Animated.Value(0)).current;
 
-  function handleClose() {
+  // Load edit data or draft when modal opens
+  useEffect(() => {
+    if (visible) {
+      if (isEditing && editPost) {
+        // Load edit data
+        setContent(editPost.content);
+        setSelectedHashtags(editPost.hashtags);
+        
+        // Animate in
+        Animated.spring(slideAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 8,
+        }).start();
+      } else if (draft && hasDraft()) {
+        setShowDraftAlert(true);
+      } else {
+        // Animate in
+        Animated.spring(slideAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 8,
+        }).start();
+      }
+    }
+  }, [visible, draft, hasDraft, slideAnim, isEditing, editPost]);
+
+  // Auto-save draft when content changes (only if not editing)
+  useEffect(() => {
+    if (visible && !isEditing && (content || selectedHashtags.length > 0)) {
+      autoSaveDraft({
+        content,
+        hashtags: selectedHashtags,
+        imageUrl: undefined,
+      });
+    }
+  }, [content, selectedHashtags, visible, isEditing]); // Removed autoSaveDraft from deps
+
+  const loadDraft = useCallback(() => {
+    if (draft) {
+      setContent(draft.content);
+      setSelectedHashtags(draft.hashtags);
+    }
+    setShowDraftAlert(false);
+    
+    // Animate in
+    Animated.spring(slideAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  }, [draft, slideAnim]);
+
+  const discardDraft = useCallback(async () => {
+    await clearDraft();
+    setShowDraftAlert(false);
+    
+    // Animate in
+    Animated.spring(slideAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  }, [clearDraft, slideAnim]);
+
+  const handleClose = useCallback(() => {
     if (isSubmitting) return;
     
-    setContent('');
-    setSelectedHashtags([]);
-    setHashtagInput('');
-    onClose();
-  }
+    // Animate out
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setContent('');
+      setSelectedHashtags([]);
+      setHashtagInput('');
+      onClose();
+    });
+  }, [isSubmitting, onClose, slideAnim]);
 
   function addHashtag(hashtag: string) {
     const cleanHashtag = hashtag.toLowerCase().trim();
@@ -78,12 +166,22 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
 
       setIsSubmitting(true);
       
-      await createPost({
-        content: content.trim(),
-        hashtags: selectedHashtags,
-      });
-
-      Alert.alert('Success', 'Post created successfully!');
+      if (isEditing && editPost) {
+        await updatePost(editPost.id, {
+          content: content.trim(),
+          hashtags: selectedHashtags,
+        });
+        Alert.alert('Success', 'Post updated successfully!');
+      } else {
+        await createPost({
+          content: content.trim(),
+          hashtags: selectedHashtags,
+        });
+        
+        // Clear draft after successful post
+        await clearDraft();
+        Alert.alert('Success', 'Post created successfully!');
+      }
       handleClose();
     } catch (error) {
       if (error instanceof Error) {
@@ -109,33 +207,44 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        {/* Drag Handle */}
+        <View style={styles.modalDragHandle} />
+        
         {/* Header */}
         <View style={styles.modalHeader}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
+          <Pressable
+            style={({ pressed }) => [
+              styles.modalCloseButton,
+              pressed && { backgroundColor: isDark ? '#333333' : '#f0f0f0' }
+            ]}
             onPress={handleClose}
             disabled={isSubmitting}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel="Close create post modal"
+            accessibilityHint="Discards any unsaved changes"
           >
             <Ionicons 
               name="close" 
               size={24} 
               color={isDark ? '#ffffff' : '#000000'} 
             />
-          </TouchableOpacity>
+          </Pressable>
           
-          <Text style={styles.modalTitle}>Create Post</Text>
+          <Text style={styles.modalTitle}>
+            {isEditing ? 'Edit Post' : 'Create Post'}
+          </Text>
           
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({ pressed }) => [
               styles.createPostButton,
-              !canSubmit && styles.submitButtonDisabled
+              !canSubmit && styles.submitButtonDisabled,
+              pressed && canSubmit && { opacity: 0.8 }
             ]}
             onPress={handleSubmit}
             disabled={!canSubmit}
             accessibilityRole="button"
-            accessibilityLabel="Post"
+            accessibilityLabel="Publish post"
+            accessibilityHint={canSubmit ? 'Publishes your post to the community' : 'Post content is required'}
           >
             <Text style={[
               styles.createPostButtonText,
@@ -143,7 +252,7 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
             ]}>
               {isSubmitting ? 'Posting...' : 'Post'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <ScrollView style={styles.modalBody}>
@@ -185,6 +294,7 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
               {selectedHashtags.length}/5 hashtags selected
             </Text>
           </View>
+
 
           {/* Selected Hashtags */}
           {selectedHashtags.length > 0 && (
@@ -237,6 +347,52 @@ export function CreatePostModal({ visible, onClose }: CreatePostModalProps) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Draft Alert Modal */}
+      <Modal
+        visible={showDraftAlert}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDraftAlert(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { maxHeight: '40%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Draft Found</Text>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={[styles.postText, { marginBottom: 16 }]}>
+                You have an unsaved draft from {formatDraftAge()}. Would you like to continue with your draft or start fresh?
+              </Text>
+              
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Pressable
+                  style={[styles.submitButton, { flex: 1, backgroundColor: isDark ? '#333333' : '#e9ecef' }]}
+                  onPress={discardDraft}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start fresh"
+                >
+                  <Text style={[styles.submitButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>
+                    Start Fresh
+                  </Text>
+                </Pressable>
+                
+                <Pressable
+                  style={[styles.submitButton, { flex: 1 }]}
+                  onPress={loadDraft}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with draft"
+                >
+                  <Text style={styles.submitButtonText}>
+                    Continue Draft
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }

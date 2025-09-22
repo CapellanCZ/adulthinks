@@ -1,26 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
-  RefreshControl,
   ActivityIndicator,
   Alert,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useCommunityStyles } from '../../modules/community/styles/communityStyles';
 import { useCommunity } from '../../modules/community/hooks/useCommunity';
-import { PostItem, HashtagFilter, CreatePostModal } from '../../modules/community/components';
+import { HashtagFilter, CreatePostModal } from '../../modules/community/components';
+import { OptimizedPostsList } from '../../modules/community/components/OptimizedPostsList';
 import type { Post } from '../../modules/community/types';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 export default function CommunityScreen() {
   const styles = useCommunityStyles();
   const colorScheme = useColorScheme();
+  const bottom = useBottomTabBarHeight();
   const isDark = colorScheme === 'dark';
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | undefined>();
 
   const {
     posts,
@@ -34,47 +38,24 @@ export default function CommunityScreen() {
     clearError,
   } = useCommunity();
 
-  function renderPost({ item }: { item: Post }) {
-    return <PostItem post={item} />;
-  }
+  const handleCreatePost = useCallback(async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setEditingPost(undefined);
+    setShowCreateModal(true);
+  }, []);
 
-  function renderFooter() {
-    if (!isLoadingMore) return null;
-    
-    return (
-      <View style={{ padding: 20, alignItems: 'center' }}>
-        <ActivityIndicator size="small" color="#007AFF" />
-      </View>
-    );
-  }
+  const handleEditPost = useCallback(async (post: Post) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setEditingPost(post);
+    setShowCreateModal(true);
+  }, []);
 
-  function renderEmpty() {
-    if (isLoading) return null;
+  const handleCloseModal = useCallback(() => {
+    setShowCreateModal(false);
+    setEditingPost(undefined);
+  }, []);
 
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons 
-          name="chatbubbles-outline" 
-          size={64} 
-          color={isDark ? '#333333' : '#e9ecef'} 
-        />
-        <Text style={styles.emptyText}>
-          {selectedHashtag 
-            ? `No posts found for #${selectedHashtag}` 
-            : 'No posts yet'
-          }
-        </Text>
-        <Text style={styles.emptySubtext}>
-          {selectedHashtag 
-            ? 'Try selecting a different hashtag or create the first post!' 
-            : 'Be the first to share your experience about getting government IDs in Cavite!'
-          }
-        </Text>
-      </View>
-    );
-  }
-
-  function handleError() {
+  const handleError = useCallback(() => {
     if (error) {
       Alert.alert(
         'Error',
@@ -85,7 +66,7 @@ export default function CommunityScreen() {
         ]
       );
     }
-  }
+  }, [error, refresh, clearError]);
 
   // Show error alert when error occurs
   React.useEffect(() => {
@@ -94,17 +75,21 @@ export default function CommunityScreen() {
 
   if (isLoading && posts.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Community</Text>
-          <TouchableOpacity
-            style={styles.createPostButton}
-            onPress={() => setShowCreateModal(true)}
+          <Pressable
+            style={({ pressed }) => [
+              styles.createPostButton,
+              pressed && { opacity: 0.8 }
+            ]}
+            onPress={handleCreatePost}
             accessibilityRole="button"
             accessibilityLabel="Create new post"
+            accessibilityHint="Opens a form to create a new community post"
           >
             <Ionicons name="add" size={20} color="#ffffff" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
         
         <HashtagFilter />
@@ -120,48 +105,44 @@ export default function CommunityScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
-        <TouchableOpacity
-          style={styles.createPostButton}
-          onPress={() => setShowCreateModal(true)}
+        <Pressable
+          style={({ pressed }) => [
+            styles.createPostButton,
+            pressed && { opacity: 0.8 }
+          ]}
+          onPress={handleCreatePost}
           accessibilityRole="button"
           accessibilityLabel="Create new post"
+          accessibilityHint="Opens a form to create a new community post"
         >
           <Ionicons name="add" size={20} color="#ffffff" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Hashtag Filter */}
       <HashtagFilter />
 
       {/* Posts List */}
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refresh}
-            tintColor="#007AFF"
-            colors={['#007AFF']}
-          />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={posts.length === 0 ? { flex: 1 } : undefined}
+      <OptimizedPostsList
+        posts={posts}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        onRefresh={refresh}
+        onLoadMore={loadMore}
+        selectedHashtag={selectedHashtag}
+        onEditPost={handleEditPost}
       />
 
       {/* Create Post Modal */}
       <CreatePostModal
         visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={handleCloseModal}
+        editPost={editingPost}
       />
     </SafeAreaView>
   );

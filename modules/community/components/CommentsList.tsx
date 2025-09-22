@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useCommunityStyles } from '../styles/communityStyles';
 import { useCommunityStore } from '../store/useCommunityStore';
+import { ReplyModal } from './ReplyModal';
 import type { Comment } from '../types';
 
 interface CommentsListProps {
@@ -19,9 +21,10 @@ interface CommentsListProps {
 
 interface CommentItemProps {
   comment: Comment;
+  onReply: (comment: Comment) => void;
 }
 
-function CommentItem({ comment }: CommentItemProps) {
+function CommentItem({ comment, onReply }: CommentItemProps) {
   const styles = useCommunityStyles();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -109,6 +112,7 @@ function CommentItem({ comment }: CommentItemProps) {
           
           <TouchableOpacity 
             style={styles.commentActionButton}
+            onPress={() => onReply(comment)}
             accessibilityRole="button"
             accessibilityLabel="Reply to comment"
           >
@@ -133,9 +137,24 @@ export function CommentsList({ postId }: CommentsListProps) {
   const isDark = colorScheme === 'dark';
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
   
   const { comments, createComment } = useCommunityStore();
   const postComments = comments[postId] || [];
+
+  const handleReply = useCallback(async (comment: Comment) => {
+    console.log('Reply button clicked for comment:', comment.id);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setReplyingToComment(comment);
+    setShowReplyModal(true);
+    console.log('Modal should be visible now:', true);
+  }, []);
+
+  const handleCloseReplyModal = useCallback(() => {
+    setShowReplyModal(false);
+    setReplyingToComment(null);
+  }, []);
 
   async function handleSubmitComment() {
     if (!commentText.trim() || isSubmitting) return;
@@ -145,6 +164,7 @@ export function CommentsList({ postId }: CommentsListProps) {
       await createComment({
         post_id: postId,
         content: commentText.trim(),
+        parent_comment_id: undefined, // Only top-level comments from this input
       });
       setCommentText('');
     } catch (error) {
@@ -205,7 +225,7 @@ export function CommentsList({ postId }: CommentsListProps) {
 
       {/* Comments List */}
       {postComments.map((comment) => (
-        <CommentItem key={comment.id} comment={comment} />
+        <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
       ))}
       
       {postComments.length === 0 && (
@@ -214,6 +234,14 @@ export function CommentsList({ postId }: CommentsListProps) {
           <Text style={styles.emptySubtext}>Be the first to comment!</Text>
         </View>
       )}
+
+      {/* Reply Modal */}
+      <ReplyModal
+        visible={showReplyModal}
+        onClose={handleCloseReplyModal}
+        comment={replyingToComment}
+        postId={postId}
+      />
     </View>
   );
 }

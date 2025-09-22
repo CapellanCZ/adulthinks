@@ -1,32 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
   Alert,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useCommunityStyles } from '../styles/communityStyles';
 import { useCommunityStore } from '../store/useCommunityStore';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { CommentsList } from './CommentsList';
+import { PostOptionsMenu } from './PostOptionsMenu';
 import type { Post } from '../types';
-import { CommentsList } from './index';
 
 interface PostItemProps {
   post: Post;
+  onEdit?: (post: Post) => void;
 }
 
-export function PostItem({ post }: PostItemProps) {
+export const PostItem = React.memo(function PostItem({ post, onEdit }: PostItemProps) {
   const styles = useCommunityStyles();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [showComments, setShowComments] = useState(false);
   
   const { toggleLike, fetchComments } = useCommunityStore();
+  const { userId: currentUser } = useCurrentUser();
+  
+  const isOwner = currentUser === post.user_id;
 
-  function formatTimestamp(timestamp: string): string {
-    const date = new Date(timestamp);
+  const formattedTimestamp = useMemo(() => {
+    const date = new Date(post.created_at);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     
@@ -39,28 +47,36 @@ export function PostItem({ post }: PostItemProps) {
       const diffInDays = Math.floor(diffInHours / 24);
       return `${diffInDays}d ago`;
     }
-  }
+  }, [post.created_at]);
 
-  function getUserDisplayName(): string {
+  const userDisplayName = useMemo(() => {
     const firstName = post.user_first_name || '';
     const lastName = post.user_last_name || '';
     return `${firstName} ${lastName}`.trim() || 'Anonymous User';
-  }
+  }, [post.user_first_name, post.user_last_name]);
 
-  async function handleLike() {
+  const handleLike = useCallback(async () => {
     try {
+      // Haptic feedback for better UX
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await toggleLike(post.id);
     } catch (error) {
       Alert.alert('Error', 'Failed to like post');
     }
-  }
+  }, [post.id, toggleLike]);
 
-  async function handleShowComments() {
-    if (!showComments) {
-      await fetchComments(post.id);
+  const handleShowComments = useCallback(async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!showComments) {
+        await fetchComments(post.id);
+      }
+      setShowComments(!showComments);
+    } catch (error) {
+      console.error('Error loading comments:', error);
     }
-    setShowComments(!showComments);
-  }
+  }, [showComments, post.id, fetchComments]);
+
 
   return (
     <View style={styles.postContainer}>
@@ -84,12 +100,19 @@ export function PostItem({ post }: PostItemProps) {
         </View>
         <View style={styles.postUserInfo}>
           <Text style={styles.postUserName}>
-            {getUserDisplayName()}
+            {userDisplayName}
           </Text>
           <Text style={styles.postTimestamp}>
-            {formatTimestamp(post.created_at)}
+            {formattedTimestamp}
           </Text>
         </View>
+        
+        {isOwner && onEdit && (
+          <PostOptionsMenu
+            post={post}
+            onEdit={() => onEdit(post)}
+          />
+        )}
       </View>
 
       {/* Post Content */}
@@ -98,13 +121,6 @@ export function PostItem({ post }: PostItemProps) {
           {post.content}
         </Text>
         
-        {post.image_url && (
-          <Image 
-            source={{ uri: post.image_url }} 
-            style={styles.postImage}
-            resizeMode="cover"
-          />
-        )}
 
         {post.hashtags.length > 0 && (
           <View style={styles.postHashtags}>
@@ -119,11 +135,15 @@ export function PostItem({ post }: PostItemProps) {
 
       {/* Post Actions */}
       <View style={styles.postActions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
+        <Pressable 
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={handleLike}
           accessibilityRole="button"
           accessibilityLabel={post.is_liked ? 'Unlike post' : 'Like post'}
+          accessibilityHint={`Currently ${post.likes_count} likes`}
         >
           <Ionicons
             name={post.is_liked ? 'heart' : 'heart-outline'}
@@ -136,13 +156,17 @@ export function PostItem({ post }: PostItemProps) {
           ]}>
             {post.likes_count}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity 
-          style={styles.actionButton}
+        <Pressable 
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={handleShowComments}
           accessibilityRole="button"
           accessibilityLabel={showComments ? 'Hide comments' : 'Show comments'}
+          accessibilityHint={`${post.comments_count} comments available`}
         >
           <Ionicons
             name="chatbubble-outline"
@@ -152,25 +176,30 @@ export function PostItem({ post }: PostItemProps) {
           <Text style={styles.actionButtonText}>
             {post.comments_count}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity 
-          style={styles.actionButton}
+        <Pressable 
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && { opacity: 0.7 }
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Share post"
+          accessibilityHint="Share this post with others"
         >
           <Ionicons
             name="share-outline"
             size={20}
             color={isDark ? '#888888' : '#6c757d'}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Comments Section */}
       {showComments && (
         <CommentsList postId={post.id} />
       )}
+
     </View>
   );
-}
+});

@@ -15,6 +15,7 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
   posts: [],
   comments: {},
   selectedHashtag: null,
+  searchQuery: '',
   isLoading: false,
   isLoadingMore: false,
   hasMore: true,
@@ -75,7 +76,6 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
           user_id: user.id,
           content: data.content,
           hashtags: data.hashtags,
-          image_url: data.image_url || null,
         });
 
       if (error) throw error;
@@ -211,6 +211,15 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
 
       if (error) throw error;
 
+      // Update post comment count in local state
+      set(state => ({
+        posts: state.posts.map(post =>
+          post.id === data.post_id
+            ? { ...post, comments_count: post.comments_count + 1 }
+            : post
+        ),
+      }));
+
       // Refresh comments after creating
       await get().fetchComments(data.post_id);
     } catch (error) {
@@ -225,6 +234,72 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
   setSelectedHashtag: (hashtag: string | null) => {
     set({ selectedHashtag: hashtag });
     get().fetchPosts(hashtag || undefined, true);
+  },
+
+  setSearchQuery: (query: string) => {
+    set({ searchQuery: query });
+    // TODO: Implement search functionality
+  },
+
+  editPost: async (postId: string, data: CreatePostData) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('posts')
+        .update({
+          content: data.content,
+          hashtags: data.hashtags,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', postId)
+        .eq('user_id', user.id); // Ensure user can only edit their own posts
+
+      if (error) throw error;
+
+      // Update local state
+      set(state => ({
+        posts: state.posts.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                content: data.content,
+                hashtags: data.hashtags,
+                updated_at: new Date().toISOString(),
+              }
+            : post
+        ),
+      }));
+    } catch (error) {
+      console.error('Error editing post:', error);
+      set({
+        error: error instanceof Error ? error.message : 'Failed to edit post',
+      });
+      throw error;
+    }
+  },
+
+  deletePost: async (postId: string) => {
+    try {
+      // Use the secure database function for deletion
+      const { data, error } = await supabase.rpc('delete_user_post', {
+        post_id_param: postId
+      });
+
+      if (error) throw error;
+
+      // Update local state only if deletion was successful
+      set(state => ({
+        posts: state.posts.filter(post => post.id !== postId),
+      }));
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      set({
+        error: error instanceof Error ? error.message : 'Failed to delete post',
+      });
+      throw error;
+    }
   },
 
   clearError: () => {

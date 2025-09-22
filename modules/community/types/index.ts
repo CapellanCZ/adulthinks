@@ -10,15 +10,14 @@ export interface Post {
   user_id: string;
   content: string;
   hashtags: string[];
-  image_url: string | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
   updated_at: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
-  user_avatar_url: string | null;
-  is_liked: boolean;
+  user_first_name?: string;
+  user_last_name?: string;
+  user_avatar_url?: string;
+  is_liked?: boolean;
 }
 
 export interface Comment {
@@ -48,7 +47,6 @@ export interface Like {
 export interface CreatePostData {
   content: string;
   hashtags: string[];
-  image_url?: string;
 }
 
 export interface CreateCommentData {
@@ -67,6 +65,7 @@ export interface CommunityState {
   posts: Post[];
   comments: Record<string, Comment[]>;
   selectedHashtag: string | null;
+  searchQuery: string;
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -76,10 +75,13 @@ export interface CommunityState {
 export interface CommunityActions {
   fetchPosts: (hashtag?: string, reset?: boolean) => Promise<void>;
   createPost: (data: CreatePostData) => Promise<void>;
+  editPost: (postId: string, data: CreatePostData) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
   toggleLike: (postId?: string, commentId?: string) => Promise<void>;
   fetchComments: (postId: string) => Promise<void>;
   createComment: (data: CreateCommentData) => Promise<void>;
   setSelectedHashtag: (hashtag: string | null) => void;
+  setSearchQuery: (query: string) => void;
   clearError: () => void;
 }
 
