@@ -38,30 +38,53 @@ export class SupabaseAuthProvider extends AuthProvider {
   }
 
   async signUpWithEmail(credentials: SignupCredentials): Promise<AuthResult> {
-    const { data, error } = await supabase.auth.signUp({
-      email: credentials.email,
-      password: credentials.password,
-      options: {
-        data: {
-          full_name: credentials.fullName,
-          ...credentials.metadata,
-        },
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+        // No metadata needed for basic signup - names can be added later
+      });
 
-    if (error) throw error;
-    if (!data.user) throw new Error("Registration failed");
+      if (error) {
+        console.error("Supabase signup error:", error);
+        
+        // Enhanced error handling for duplicate emails
+        if (error.message?.toLowerCase().includes("already") || 
+            error.message?.toLowerCase().includes("exists") ||
+            error.message?.toLowerCase().includes("duplicate") ||
+            error.message?.toLowerCase().includes("user_already_exists")) {
+          throw new Error("An account with this email already exists");
+        }
+        
+        throw error;
+      }
+      
+      if (!data.user) throw new Error("Registration failed");
+      
+      // Additional check: if user exists but session is null, it might be a duplicate
+      if (data.user && !data.session && data.user.email_confirmed_at) {
+        throw new Error("An account with this email already exists");
+      }
 
-    const user: AuthUser = {
-      id: data.user.id,
-      email: data.user.email!,
-      emailVerified: !!data.user.email_confirmed_at,
-      name: credentials.fullName,
-      provider: "supabase",
-      metadata: data.user.user_metadata,
-    };
+      // Profile creation is handled automatically by the database trigger
+      // The trigger creates a profile when a user is inserted into auth.users
+      // No manual profile creation needed here
 
-    return { user, session: data.session };
+      const user: AuthUser = {
+        id: data.user.id,
+        email: data.user.email!,
+        emailVerified: !!data.user.email_confirmed_at,
+        name: credentials.fullName,
+        provider: "supabase",
+        metadata: data.user.user_metadata,
+      };
+
+      return { user, session: data.session };
+    } catch (error: any) {
+      console.error("Full signup error:", error);
+      // Re-throw with more context
+      throw new Error(`Database error saving new user: ${error.message || error}`);
+    }
   }
 
   async signOut(): Promise<void> {
@@ -78,40 +101,77 @@ export class SupabaseAuthProvider extends AuthProvider {
 
     if (error) throw error;
     
+    // Map your actual table schema to the AuthProfile interface
+    const fullName = [data.first_name, data.middle_name, data.last_name]
+      .filter(Boolean)
+      .join(" ") || null;
+    
     return {
       id: data.id,
-      email: data.email,
-      fullName: data.full_name,
-      avatar: data.avatar_url,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      metadata: data.metadata,
+      email: data.email || "", // Your table doesn't have email, get from auth user if needed
+      fullName: fullName || undefined,
+      avatar: data.avatar_url || undefined,
+      createdAt: data.created_at || new Date().toISOString(),
+      updatedAt: data.updated_at || new Date().toISOString(),
+      metadata: {
+        username: data.username,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        middleName: data.middle_name,
+        website: data.website,
+      },
     };
   }
 
   async updateProfile(userId: string, updates: Partial<AuthProfile>): Promise<AuthProfile> {
+    // Parse fullName into separate fields if provided
+    const nameParts = updates.fullName?.split(" ") || [];
+    const firstName = nameParts[0] || undefined;
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : undefined;
+    const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : undefined;
+
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Map updates to your table schema
+    if (updates.avatar !== undefined) updateData.avatar_url = updates.avatar;
+    if (updates.fullName !== undefined) {
+      updateData.first_name = firstName;
+      updateData.last_name = lastName;
+      updateData.middle_name = middleName;
+    }
+    if (updates.metadata?.username !== undefined) updateData.username = updates.metadata.username;
+    if (updates.metadata?.website !== undefined) updateData.website = updates.metadata.website;
+
     const { data, error } = await supabase
       .from("profiles")
-      .update({
-        full_name: updates.fullName,
-        avatar_url: updates.avatar,
-        metadata: updates.metadata,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", userId)
       .select()
       .single();
 
     if (error) throw error;
     
+    // Map response back to AuthProfile format
+    const fullName = [data.first_name, data.middle_name, data.last_name]
+      .filter(Boolean)
+      .join(" ") || undefined;
+    
     return {
       id: data.id,
-      email: data.email,
-      fullName: data.full_name,
-      avatar: data.avatar_url,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      metadata: data.metadata,
+      email: data.email || "",
+      fullName: fullName,
+      avatar: data.avatar_url || undefined,
+      createdAt: data.created_at || new Date().toISOString(),
+      updatedAt: data.updated_at || new Date().toISOString(),
+      metadata: {
+        username: data.username,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        middleName: data.middle_name,
+        website: data.website,
+      },
     };
   }
 
