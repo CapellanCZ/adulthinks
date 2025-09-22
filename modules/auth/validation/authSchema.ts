@@ -7,7 +7,7 @@ yup.addMethod(yup.string, 'strongPassword', function(message = 'Password is not 
     
     const hasUpperCase = /[A-Z]/.test(value);
     const hasLowerCase = /[a-z]/.test(value);
-    const hasNumbers = /\d/.test(value);
+    const hasNumbers = /\d/.test(value);	
     const hasSpecialChar = /[^A-Za-z0-9]/.test(value);
     const isLongEnough = value.length >= 8;
     

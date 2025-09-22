@@ -1,9 +1,10 @@
 import React, { useCallback } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, useColorScheme } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 import { Input } from "@/components/ui/input";
 import { View } from "@/components/ui/view";
 import { SignupFormData, SignupFormErrors } from "../../store/useSignupFormStore";
+import { theme } from "../../styles/signupStyles";
 
 interface SignupFormFieldsProps {
   formData: SignupFormData;
@@ -30,6 +31,8 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
   onToggleConfirmPasswordVisibility,
   onClearError,
 }) => {
+  const colorScheme = useColorScheme();
+  const colors = theme.getThemeColors(colorScheme);
   // Memoized field handlers
   const handleEmailChange = useCallback((text: string) => {
     onFieldChange("email", text.trim().toLowerCase());
@@ -114,9 +117,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
               style={styles.eyeButton}
             >
               {showPassword ? (
-                <EyeOff size={22} color="#888" />
+                <EyeOff size={22} color={colors.icon} />
               ) : (
-                <Eye size={22} color="#888" />
+                <Eye size={22} color={colors.icon} />
               )}
             </Pressable>
           }
@@ -148,9 +151,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
               style={styles.eyeButton}
             >
               {showConfirmPassword ? (
-                <EyeOff size={22} color="#888" />
+                <EyeOff size={22} color={colors.icon} />
               ) : (
-                <Eye size={22} color="#888" />
+                <Eye size={22} color={colors.icon} />
               )}
             </Pressable>
           }

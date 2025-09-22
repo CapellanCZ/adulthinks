@@ -13,7 +13,7 @@ interface SignupHeaderProps {
 
 export const SignupHeader: React.FC<SignupHeaderProps> = ({
   title = "Create Account",
-  subtitle = "Enter your details and register",
+  subtitle = "Enter your details and register.",
   iconSize = 40,
   iconColor = "#666",
 }) => {
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   title: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitle: {
     textAlign: "center",

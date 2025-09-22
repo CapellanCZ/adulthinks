@@ -1,9 +1,10 @@
 import React from "react";
-import { StyleSheet } from "react-native";
+import { useColorScheme } from "react-native";
 import { Button } from "@/components/ui/button";
 import { ExpoIcons, FlexibleIcon } from "@/components/ui/flexible-icon";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
+import { useSignupStyles, theme } from "../../styles/signupStyles";
 
 interface SocialLoginButtonsProps {
   onGooglePress: () => void;
@@ -18,8 +19,12 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
   loading = false,
   disabled = false,
 }) => {
+  const styles = useSignupStyles();
+  const colorScheme = useColorScheme();
+  const colors = theme.getThemeColors(colorScheme);
+
   return (
-    <View style={styles.container}>
+    <View style={styles.socialContainer}>
       {/* Separator */}
       <View style={styles.separatorContainer}>
         <View style={styles.separatorLine} />
@@ -28,7 +33,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
       </View>
 
       {/* Social Login Buttons */}
-      <View style={styles.buttonsContainer}>
+      <View style={styles.socialButtonsContainer}>
         <Button
           variant="outline"
           style={styles.socialButton}
@@ -37,7 +42,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
           accessibilityLabel="Sign up with Google"
           accessibilityHint="Creates account using your Google account"
         >
-          <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} color="#000000" />
+          <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} />
           <Text>Google</Text>
         </Button>
         
@@ -49,7 +54,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
           accessibilityLabel="Sign up with Apple"
           accessibilityHint="Creates account using your Apple ID"
         >
-          <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} color="#000000" />
+          <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} />
           <Text>Apple</Text>
         </Button>
       </View>
@@ -57,29 +62,3 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: 30,
-  },
-  separatorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#e0e0e0",
-  },
-  separatorText: {
-    marginHorizontal: 16,
-    fontSize: 15,
-    color: "#666",
-  },
-  buttonsContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  socialButton: {
-    flex: 1,
-  },
-});

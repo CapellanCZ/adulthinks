@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import { TouchableOpacity, useColorScheme } from "react-native";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -7,6 +7,7 @@ import { AvoidKeyboard } from "@/components/ui/avoid-keyboard";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
+import { useSignupStyles, theme } from "@/modules/auth/styles/signupStyles";
 
 // Import auth modules
 import { useSignup } from "@/modules/auth/hooks/useSignup";
@@ -62,6 +63,10 @@ export default function SignupScreen() {
     navigateBack,
   } = useSignup();
 
+  const styles = useSignupStyles();
+  const colorScheme = useColorScheme();
+  const colors = theme.getThemeColors(colorScheme);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header with Back Button */}
@@ -72,7 +77,7 @@ export default function SignupScreen() {
           accessibilityLabel="Go back"
           accessibilityHint="Returns to the previous screen"
         >
-          <ArrowLeft size={24} color="#666" />
+          <ArrowLeft size={24} color={colors.icon} />
         </TouchableOpacity>
       </View>
 
@@ -84,7 +89,7 @@ export default function SignupScreen() {
         {/* General Error Message */}
         {errors.general && (
           <View style={styles.errorContainer}>
-            <AlertCircle size={18} color="#dc2626" style={styles.errorIcon} />
+            <AlertCircle size={18} color={colors.error} style={styles.errorIcon} />
             <Text style={styles.errorText}>{errors.general}</Text>
           </View>
         )}
@@ -142,50 +147,3 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "transparent",
-    alignSelf: "flex-start",
-  },
-  mainContent: {
-    flex: 1,
-    justifyContent: "center",
-    paddingBottom: "12%",
-    paddingHorizontal: 20,
-    gap: 30,
-  },
-  submitButton: {
-    marginTop: 10,
-  },
-  errorContainer: {
-    backgroundColor: "#fee2e2",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: -10,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  errorIcon: {
-    marginRight: 8,
-    marginTop: 1,
-    flexShrink: 0,
-  },
-  errorText: {
-    color: "#dc2626",
-    fontSize: 14,
-    fontWeight: "500",
-    flex: 1,
-    lineHeight: 20,
-  },
-});
