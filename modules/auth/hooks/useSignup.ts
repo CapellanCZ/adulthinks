@@ -60,6 +60,7 @@ export const useSignup = (): UseSignupReturn => {
     validateField,
     clearError,
     setSuccess,
+    resetForm,
     submitForm,
   } = useSignupFormStore();
 
@@ -100,12 +101,14 @@ export const useSignup = (): UseSignupReturn => {
   }, []);
 
   const navigateToLogin = useCallback(() => {
+    resetForm();
     router.push("/(auth)/login");
-  }, []);
+  }, [resetForm]);
 
   const navigateBack = useCallback(() => {
+    resetForm();
     router.back();
-  }, []);
+  }, [resetForm]);
 
   const navigateToTerms = useCallback(() => {
     // TODO: Navigate to terms and conditions
@@ -119,13 +122,14 @@ export const useSignup = (): UseSignupReturn => {
 
   const handleSuccessClose = useCallback(() => {
     setSuccess(false);
-  }, [setSuccess]);
+    resetForm();
+  }, [setSuccess, resetForm]);
 
   const handleSuccessContinue = useCallback(() => {
     setSuccess(false);
-    // Navigate to main app after successful signup
-    router.replace("/(tabs)");
-  }, [setSuccess]);
+    resetForm();
+    router.push("/(auth)/login");
+  }, [setSuccess, resetForm]);
 
   return {
     // Form state

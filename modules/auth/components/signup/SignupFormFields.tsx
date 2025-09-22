@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
 import { SignupFormData, SignupFormErrors } from "../../store/useSignupFormStore";
 
@@ -31,6 +30,43 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
   onToggleConfirmPasswordVisibility,
   onClearError,
 }) => {
+  // Memoized field handlers
+  const handleEmailChange = useCallback((text: string) => {
+    onFieldChange("email", text.trim().toLowerCase());
+  }, [onFieldChange]);
+
+  const handleEmailBlur = useCallback(() => {
+    onFieldBlur("email");
+  }, [onFieldBlur]);
+
+  const handleEmailFocus = useCallback(() => {
+    onClearError("email");
+  }, [onClearError]);
+
+  const handlePasswordChange = useCallback((text: string) => {
+    onFieldChange("password", text);
+  }, [onFieldChange]);
+
+  const handlePasswordBlur = useCallback(() => {
+    onFieldBlur("password");
+  }, [onFieldBlur]);
+
+  const handlePasswordFocus = useCallback(() => {
+    onClearError("password");
+  }, [onClearError]);
+
+  const handleConfirmPasswordChange = useCallback((text: string) => {
+    onFieldChange("confirmPassword", text);
+  }, [onFieldChange]);
+
+  const handleConfirmPasswordBlur = useCallback(() => {
+    onFieldBlur("confirmPassword");
+  }, [onFieldBlur]);
+
+  const handleConfirmPasswordFocus = useCallback(() => {
+    onClearError("confirmPassword");
+  }, [onClearError]);
+
   return (
     <View style={styles.container}>
       {/* Email Field */}
@@ -39,9 +75,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
           variant="outline"
           placeholder="Enter your email"
           value={formData.email}
-          onChangeText={(text) => onFieldChange("email", text)}
-          onBlur={() => onFieldBlur("email")}
-          onFocus={() => onClearError("email")}
+          onChangeText={handleEmailChange}
+          onBlur={handleEmailBlur}
+          onFocus={handleEmailFocus}
           autoComplete="email"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -59,9 +95,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
           variant="outline"
           placeholder="Enter your password"
           value={formData.password}
-          onChangeText={(text) => onFieldChange("password", text)}
-          onBlur={() => onFieldBlur("password")}
-          onFocus={() => onClearError("password")}
+          onChangeText={handlePasswordChange}
+          onBlur={handlePasswordBlur}
+          onFocus={handlePasswordFocus}
           secureTextEntry={!showPassword}
           textContentType="newPassword"
           autoComplete="password-new"
@@ -93,9 +129,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
           variant="outline"
           placeholder="Confirm your password"
           value={formData.confirmPassword}
-          onChangeText={(text) => onFieldChange("confirmPassword", text)}
-          onBlur={() => onFieldBlur("confirmPassword")}
-          onFocus={() => onClearError("confirmPassword")}
+          onChangeText={handleConfirmPasswordChange}
+          onBlur={handleConfirmPasswordBlur}
+          onFocus={handleConfirmPasswordFocus}
           secureTextEntry={!showConfirmPassword}
           textContentType="newPassword"
           autoComplete="password-new"

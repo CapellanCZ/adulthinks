@@ -84,19 +84,13 @@ export class SupabaseAuthProvider extends AuthProvider {
         // No metadata needed for basic signup - names can be added later
       });
       
-      // If signup returns a user but no session, it means user already exists
-      if (data?.user && !data?.session) {
-        throw new Error("An account with this email already exists");
-      }
-
       if (error) {
         console.error("Supabase signup error:", error);
         
-        // Enhanced error handling for duplicate emails
-        if (error.message?.toLowerCase().includes("already") || 
-            error.message?.toLowerCase().includes("exists") ||
-            error.message?.toLowerCase().includes("duplicate") ||
-            error.message?.toLowerCase().includes("user_already_exists")) {
+        // Only handle actual duplicate errors from Supabase
+        if (error.message?.toLowerCase().includes("user_already_exists") ||
+            error.code === "user_already_exists" ||
+            error.message?.toLowerCase().includes("email_address_already_in_use")) {
           throw new Error("An account with this email already exists");
         }
         
@@ -105,24 +99,8 @@ export class SupabaseAuthProvider extends AuthProvider {
       
       if (!data.user) throw new Error("Registration failed");
       
-      // Check if this is actually a duplicate signup attempt
-      // Supabase sometimes returns user data even for existing users
-      if (data.user && !data.session) {
-        // If there's a user but no session, it's likely a duplicate
-        throw new Error("An account with this email already exists");
-      }
-      
-      // Additional check: if user was created a while ago, it's a duplicate attempt
-      if (data.user && data.user.created_at) {
-        const createdAt = new Date(data.user.created_at);
-        const now = new Date();
-        const timeDiff = now.getTime() - createdAt.getTime();
-        
-        // If user was created more than 10 seconds ago, it's likely a duplicate
-        if (timeDiff > 10000) {
-          throw new Error("An account with this email already exists");
-        }
-      }
+      // For new signups, Supabase typically returns user but no session until email is confirmed
+      // This is normal behavior, not an error
 
       // Profile creation is handled automatically by the database trigger
       // The trigger creates a profile when a user is inserted into auth.users
@@ -141,7 +119,7 @@ export class SupabaseAuthProvider extends AuthProvider {
     } catch (error: any) {``
       console.error("Full signup error:", error);
       // Re-throw with more context
-      throw new Error(`Database error saving new user: ${error.message || error}`);
+      throw new Error(`${error.message || error}`);
     }
   }
 

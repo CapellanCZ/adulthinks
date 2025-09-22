@@ -58,7 +58,18 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
   // Actions
   setFormField: (field, value) => {
     const state = get();
-    const newFormData = { ...state.formData, [field]: value };
+    
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+    if (field === "email") {
+      // Email: trim whitespace and convert to lowercase
+      sanitizedValue = value.trim().toLowerCase();
+    } else if (field === "password" || field === "confirmPassword") {
+      // Password: no sanitization, preserve exact input
+      sanitizedValue = value;
+    }
+    
+    const newFormData = { ...state.formData, [field]: sanitizedValue };
     
     // Clear field error when user starts typing
     const newErrors = { ...state.errors };
@@ -68,7 +79,7 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
     
     set({ 
       formData: newFormData,
-      errors: newErrors
+      errors: newErrors,
     });
   },
 
@@ -79,6 +90,14 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
   validateField: (field) => {
     const state = get();
     const { formData } = state;
+    
+    // Skip validation for empty fields to avoid premature errors
+    if (!formData[field] || formData[field].trim() === "") {
+      const newErrors = { ...state.errors };
+      delete newErrors[field];
+      set({ errors: newErrors });
+      return;
+    }
     
     try {
       // Validate single field
@@ -131,14 +150,16 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
     set({ errors: newErrors });
   },
 
-  resetForm: () => set({
-    formData: initialFormData,
-    loading: false,
-    errors: {},
-    showPassword: false,
-    showConfirmPassword: false,
-    success: false,
-  }),
+  resetForm: () => {
+    set({
+      formData: { ...initialFormData },
+      loading: false,
+      errors: {},
+      showPassword: false,
+      showConfirmPassword: false,
+      success: false,
+    });
+  },
 
   setSuccess: (success) => set({ success }),
 
@@ -171,29 +192,12 @@ export const useSignupFormStore = create<SignupFormState>((set, get) => ({
       const message: string = error?.message || "An error occurred during signup";
       const code: string | undefined = error?.code;
       
-      // Comprehensive list of duplicate email patterns
-      const duplicatePatterns = [
-        "user_already_exists",
-        "email_exists", 
-        "already registered",
-        "already exists",
-        "duplicate",
-        "email address already in use",
-        "user with this email already exists",
-        "email already taken",
-        "account already exists",
-        "email is already registered"
-      ];
-
-      // Check for duplicate email scenarios
+      // Only check for specific Supabase duplicate error codes/messages
       const isDuplicate =
         code === "user_already_exists" ||
-        code === "email_exists" ||
-        code === "email_address_already_in_use" ||
-        code === "duplicate_email" ||
-        duplicatePatterns.some((pattern) => 
-          message.toLowerCase().includes(pattern.toLowerCase())
-        );
+        message.toLowerCase().includes("user_already_exists") ||
+        message.toLowerCase().includes("email_address_already_in_use") ||
+        message.toLowerCase().includes("an account with this email already exists");
 
       if (isDuplicate) {
         set({
