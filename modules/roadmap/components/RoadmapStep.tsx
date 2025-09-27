@@ -68,7 +68,7 @@ export const RoadmapStep: React.FC<RoadmapStepProps> = ({
 
       {/* Skills Section */}
       <View style={{ flexDirection: 'column', marginBottom: 15 }}>
-        <Text variant='subtitle' style={{ fontSize: 15, marginBottom: 8 }}>Skills you'll gain</Text>
+        <Text variant='subtitle' style={{ fontSize: 15, marginBottom: 8 }}>Skills you&apos;ll gain</Text>
         <View style={{ flexWrap: 'wrap', flexDirection: 'row', gap: 8 }}>
           {skills.map((skill, index) => (
             <Badge 

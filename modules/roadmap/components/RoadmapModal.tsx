@@ -6,9 +6,15 @@ import { Sparkle } from 'lucide-react-native';
 import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
 import { FIELD_CATEGORY_OPTIONS, DEGREE_PROGRAM_OPTIONS } from "@/data/degree-programs";
 
-export function CreateRoadmapContent() {
+export function CreateRoadmapContent({ onGenerate }: { onGenerate?: () => void }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCourse, setSelectedCourse] = useState<string>('');
+
+  const handleGenerate = () => {
+    if (onGenerate) {
+      onGenerate();
+    }
+  };
 
   return (
     <View style={{ gap: 16 }}>
@@ -23,7 +29,6 @@ export function CreateRoadmapContent() {
           label='Category'
           variant='outline'
           placeholder='Select a field category...'
-          searchable
           searchPlaceholder='Search field categories...'
           modalTitle='Field Categories'
           options={FIELD_CATEGORY_OPTIONS}
@@ -35,7 +40,6 @@ export function CreateRoadmapContent() {
           value={selectedCourse}
           onValueChange={(value) => setSelectedCourse(value)}
           placeholder={selectedCategory ? 'Select a course...' : 'Select a category first'}
-          searchable
           searchPlaceholder='Search a course name or abbreviation...'
           modalTitle='Courses'
           disabled={!selectedCategory}
@@ -43,7 +47,13 @@ export function CreateRoadmapContent() {
         />
       </View>
 
-      <Button icon={Sparkle} variant='default' size='lg'>
+      <Button 
+        icon={Sparkle} 
+        variant='default' 
+        size='lg'
+        onPress={handleGenerate}
+        disabled={!selectedCategory || !selectedCourse}
+      >
         Generate My Roadmap
       </Button>
     </View>
@@ -59,13 +69,15 @@ export function useCreateRoadmapModal() {
 export default function CreateRoadmapModal({
   isVisible,
   onClose,
+  onGenerate,
 }: {
   isVisible: boolean;
   onClose: () => void;
+  onGenerate?: () => void;
 }) {
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose} snapPoints={[0.3]}>
-      <CreateRoadmapContent />
+      <CreateRoadmapContent onGenerate={onGenerate} />
     </BottomSheet>
   );
 }

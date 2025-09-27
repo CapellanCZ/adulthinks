@@ -10,15 +10,53 @@ export interface RoadmapHandlers {
   handleGenerateRoadmap: () => void
   handleFabPress: () => void
   handleCloseModal: () => void
+  handleBackToWelcome: () => void
+  handleCreateRoadmap: () => void
 }
 
 export interface RoadmapModal {
   isModalVisible: boolean
 }
 
+export interface RoadmapState {
+  hasGeneratedRoadmap: boolean
+  milestones: Milestone[]
+}
+
+// Roadmap data types
+export interface MilestoneTask {
+  id: string
+  title: string
+  description: string
+  duration: string
+  completed: boolean
+}
+
+export interface MilestoneResource {
+  type: 'COURSE' | 'ARTICLE'
+  title: string
+  description: string
+  url: string
+}
+
+export interface Milestone {
+  id: string
+  title: string
+  overview: string
+  skills: string[]
+  timeframe: string
+  resources: MilestoneResource[]
+  tasks: MilestoneTask[]
+}
+
 export interface RoadmapWelcomeProps {
   colors: RoadmapColors
   handlers: RoadmapHandlers
+}
+
+export interface RoadmapProgressProps {
+  milestones: Milestone[]
+  onBack: () => void
 }
 
 export interface RoadmapScreenProps {

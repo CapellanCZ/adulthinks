@@ -1,5 +1,6 @@
 // Components
 export { RoadmapWelcome } from './components/RoadmapWelcome'
+export { RoadmapProgress } from './components/RoadmapProgress'
 export { RoadmapStep } from './components/RoadmapStep'
 
 // Hooks

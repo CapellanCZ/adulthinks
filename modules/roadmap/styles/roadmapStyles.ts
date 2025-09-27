@@ -42,7 +42,7 @@ export const roadmapStyles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 100, // Increased to position above tab bar (typical tab bar height ~80-90px)
     right: 24,
     width: 56,
     height: 56,
