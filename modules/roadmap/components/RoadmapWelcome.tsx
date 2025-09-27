@@ -1,0 +1,57 @@
+import React from 'react'
+import { Pressable } from 'react-native'
+import { Plus, Sparkles } from 'lucide-react-native'
+
+import { Text } from '@/components/ui/text'
+import { View } from '@/components/ui/view'
+import { Button } from '@/components/ui/button'
+import { roadmapStyles } from '../styles/roadmapStyles'
+import { RoadmapWelcomeProps } from '../types'
+
+export function RoadmapWelcome({ colors, handlers }: RoadmapWelcomeProps) {
+  const { borderColor, textColor, textMuted, primaryColor } = colors
+  const { handleGenerateRoadmap, handleFabPress } = handlers
+
+  return (
+    <>
+      {/* Header */}
+      <View style={[roadmapStyles.header, { borderBottomColor: borderColor }]}>
+        <Text variant="title" style={{ color: textColor }}>
+          Career Roadmap
+        </Text>
+      </View>
+
+      {/* Centered Welcome Content */}
+      <View style={roadmapStyles.welcomeContainer}>
+        <View style={[roadmapStyles.iconContainer, { backgroundColor: `${primaryColor}20` }]}>
+          <Sparkles size={48} color={primaryColor} />
+        </View>
+        
+        <Text variant="heading" style={[roadmapStyles.subtitle, { color: textColor }]}>
+          Start Your Journey
+        </Text>
+        
+        <Text variant="body" style={[roadmapStyles.description, { color: textMuted }]}>
+          AI will generate a personalized career path for you based on the degree or course field you choose. 
+          Get step-by-step guidance tailored to your goals.
+        </Text>
+        
+        <Button
+          onPress={handleGenerateRoadmap}
+          style={roadmapStyles.generateButton}
+          icon={Sparkles}
+        >
+          Generate a Roadmap
+        </Button>
+      </View>
+
+      {/* Floating Action Button */}
+      <Pressable
+        style={[roadmapStyles.fab, { backgroundColor: primaryColor }]}
+        onPress={handleFabPress}
+      >
+        <Plus size={24} color="white" />
+      </Pressable>
+    </>
+  )
+}
