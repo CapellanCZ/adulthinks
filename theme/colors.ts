@@ -32,7 +32,7 @@ const lightColors = {
   destructiveForeground: '#FFFFFF',
 
   // Border and input
-  border: '#C6C6C8',
+  border: '#E5E5E7',
   input: '#e4e4e7',
   ring: '#007AFF',
 
