@@ -12,7 +12,7 @@ const lightColors = {
   popoverForeground: '#000000',
 
   // Primary colors
-  primary: '#18181b',
+  primary: '#007AFF',
   primaryForeground: '#FFFFFF',
 
   // Secondary colors
@@ -34,17 +34,17 @@ const lightColors = {
   // Border and input
   border: '#C6C6C8',
   input: '#e4e4e7',
-  ring: '#a1a1aa',
+  ring: '#007AFF',
 
   // Text colors
   text: '#000000',
   textMuted: '#71717a',
 
   // Legacy support for existing components
-  tint: '#18181b',
+  tint: '#007AFF',
   icon: '#71717a',
   tabIconDefault: '#71717a',
-  tabIconSelected: '#18181b',
+  tabIconSelected: '#007AFF',
 
   // Default buttons, links, Send button, selected tabs
   blue: '#007AFF',
@@ -88,8 +88,8 @@ const darkColors = {
   popoverForeground: '#FFFFFF',
 
   // Primary colors
-  primary: '#e4e4e7',
-  primaryForeground: '#18181b',
+  primary: '#0A84FF',
+  primaryForeground: '#000000',
 
   // Secondary colors
   secondary: '#1C1C1E',
@@ -110,17 +110,17 @@ const darkColors = {
   // Border and input - using alpha values for better blending
   border: '#38383A',
   input: 'rgba(255, 255, 255, 0.15)',
-  ring: '#71717a',
+  ring: '#0A84FF',
 
   // Text colors
   text: '#FFFFFF',
   textMuted: '#a1a1aa',
 
   // Legacy support for existing components
-  tint: '#FFFFFF',
+  tint: '#0A84FF',
   icon: '#a1a1aa',
   tabIconDefault: '#a1a1aa',
-  tabIconSelected: '#FFFFFF',
+  tabIconSelected: '#0A84FF',
 
   // Default buttons, links, Send button, selected tabs
   blue: '#0A84FF',
