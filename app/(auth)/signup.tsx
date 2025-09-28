@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableOpacity, useColorScheme } from "react-native";
+import { Pressable, TouchableOpacity, useColorScheme } from "react-native";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -38,25 +38,25 @@ export default function SignupScreen() {
     showPassword,
     showConfirmPassword,
     success,
-    
+
     // Form actions
     setFormField,
     togglePasswordVisibility,
     toggleConfirmPasswordVisibility,
     validateField,
     clearError,
-    
+
     // Form submission
     handleSubmit,
-    
+
     // Success handling
     handleSuccessClose,
     handleSuccessContinue,
-    
+
     // Social login
     handleGoogleSignup,
     handleAppleSignup,
-    
+
     // Navigation
     navigateToTerms,
     navigateToPrivacy,
@@ -71,8 +71,8 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={navigateBack}
           accessibilityLabel="Go back"
           accessibilityHint="Returns to the previous screen"
@@ -120,19 +120,23 @@ export default function SignupScreen() {
           {loading ? "Creating Account..." : "Register"}
         </Button>
 
-        {/* Social Login Section */}
         <SocialLoginButtons
-          onGooglePress={handleGoogleSignup}
+          onGooglePress={handleGoogleSignup} 
           onApplePress={handleAppleSignup}
-          loading={loading}
         />
-      </View>
 
-      {/* Terms and Conditions - Bottom */}
-      <TermsAndConditions
-        onTermsPress={navigateToTerms}
-        onPrivacyPress={navigateToPrivacy}
-      />
+        <View style={styles.signupContainer}>
+          <View style={styles.signupTextContainer}>
+            <Text style={styles.signupPrompt}>Already have an account?</Text>
+            <Pressable onPress={navigateBack}>
+              <Text style={styles.signupLink}>
+                Login
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+      </View>
 
       <AvoidKeyboard />
 

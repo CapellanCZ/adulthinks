@@ -117,9 +117,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
               style={styles.eyeButton}
             >
               {showPassword ? (
-                <EyeOff size={22} color={colors.icon} />
-              ) : (
                 <Eye size={22} color={colors.icon} />
+              ) : (
+                <EyeOff size={22} color={colors.icon} />
               )}
             </Pressable>
           }
@@ -151,9 +151,9 @@ export const SignupFormFields: React.FC<SignupFormFieldsProps> = ({
               style={styles.eyeButton}
             >
               {showConfirmPassword ? (
-                <EyeOff size={22} color={colors.icon} />
-              ) : (
                 <Eye size={22} color={colors.icon} />
+              ) : (
+                <EyeOff size={22} color={colors.icon} />
               )}
             </Pressable>
           }

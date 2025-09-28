@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 import { User } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { View } from "@/components/ui/view";
+import Yoga from "@/assets/svg/yoga";
 
 interface SignupHeaderProps {
   title?: string;
@@ -12,8 +13,8 @@ interface SignupHeaderProps {
 }
 
 export const SignupHeader: React.FC<SignupHeaderProps> = ({
-  title = "Create Account",
-  subtitle = "Enter your details and register.",
+  title = "Create an account",
+  subtitle = "It takes less than a minute to create an account.",
   iconSize = 40,
   iconColor = "#666",
 }) => {
@@ -24,7 +25,6 @@ export const SignupHeader: React.FC<SignupHeaderProps> = ({
       accessibilityLabel={`${title}. ${subtitle}`}
     >
       <View style={styles.iconCircle}>
-        <User size={iconSize} color={iconColor} />
       </View>
       <Text variant="heading" style={styles.title}>
         {title}
@@ -39,13 +39,9 @@ export const SignupHeader: React.FC<SignupHeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   iconCircle: {
-    width: 75,
-    height: 75,
-    borderRadius: 40,
-    backgroundColor: "#f7f7f7ff",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 25,
@@ -54,6 +50,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    textAlign: "center",
+    textAlign: "left",
   },
 });

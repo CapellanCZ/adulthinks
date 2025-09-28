@@ -86,7 +86,7 @@ export function createSignupStyles(colorScheme: 'light' | 'dark' | null | undefi
       justifyContent: 'center',
       paddingBottom: '12%',
       paddingHorizontal: spacing.xl,
-      gap: spacing.xxxl,
+      gap: spacing.xl,
     },
     submitButton: {
       marginTop: spacing.sm,
@@ -117,6 +117,7 @@ export function createSignupStyles(colorScheme: 'light' | 'dark' | null | undefi
       gap: spacing.xxxl,
     },
     separatorContainer: {
+      marginTop: 10,
       flexDirection: 'row',
       alignItems: 'center',
     },
@@ -136,6 +137,25 @@ export function createSignupStyles(colorScheme: 'light' | 'dark' | null | undefi
     },
     socialButton: {
       flex: 1,
+    },
+    signupContainer: {
+      alignItems: 'center',
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xl,
+    },
+    signupTextContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    signupPrompt: {
+      fontSize: typography.sizes.medium,
+      color: colors.text.primary,
+    },
+    signupLink: {
+      fontSize: typography.sizes.medium,
+      color: colors.text.link,
+      fontWeight: typography.weights.medium,
     },
   });
 }

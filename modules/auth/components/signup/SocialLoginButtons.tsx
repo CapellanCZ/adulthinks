@@ -42,7 +42,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
           accessibilityLabel="Sign up with Google"
           accessibilityHint="Creates account using your Google account"
         >
-          <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} />
+          <FlexibleIcon icon={ExpoIcons.fontAwesome("google")} size={22} color={colors.icon} />
           <Text>Google</Text>
         </Button>
         
@@ -54,7 +54,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
           accessibilityLabel="Sign up with Apple"
           accessibilityHint="Creates account using your Apple ID"
         >
-          <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} />
+          <FlexibleIcon icon={ExpoIcons.fontAwesome("apple")} size={22} color={colors.icon} />
           <Text>Apple</Text>
         </Button>
       </View>

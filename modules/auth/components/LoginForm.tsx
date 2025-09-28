@@ -1,13 +1,13 @@
 import React from 'react';
 import { Pressable, useColorScheme } from 'react-native';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react-native';
+import { AlertCircle, Eye, EyeOff, SmilePlus } from 'lucide-react-native';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { ForgotPasswordBottomSheet } from './ForgotPasswordBottomSheet';
-import { SocialLoginButtons } from './SocialLoginButtons';
+import { SocialLoginButtons } from '../../auth/components/signup/SocialLoginButtons';
 import { useLoginStyles, theme } from '../styles/loginStyles';
 
 interface LoginFormProps {
@@ -90,18 +90,17 @@ export function LoginForm({
     <>
       {/* Header */}
       <View style={styles.headerContainer}>
+        
         <Text 
           variant="heading" 
           style={styles.headerTitle}
-          accessibilityRole="header"
         >
-          Welcome Back!
+          Welcome back,
         </Text>
         <Text 
           variant="caption"
-          accessibilityHint="Enter your email and password to access your account"
         >
-          Please enter your credentials to log in.
+          We are happy to see you here again. Enter your credentials to log in.
         </Text>
       </View>
 
@@ -207,8 +206,6 @@ export function LoginForm({
       <SocialLoginButtons
         onGooglePress={onGoogleLogin}
         onApplePress={onAppleLogin}
-        loading={loading}
-        variant="login"
       />
 
       {/* Sign Up Link */}
@@ -221,7 +218,7 @@ export function LoginForm({
             accessibilityLabel="Sign up"
             accessibilityHint="Tap to create a new account"
           >
-            <Text variant="link" style={styles.signupLink}>
+            <Text style={styles.signupLink}>
               Sign Up
             </Text>
           </Pressable>

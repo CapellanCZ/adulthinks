@@ -2,9 +2,17 @@ import { ThemeProvider } from '@/theme/theme-provider';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// import 'react-native-reanimated' // Removed to fix web compatibility;
+import { useFonts } from 'expo-font';
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    Bingo: require('@/assets/fonts/Bingo-Regular.otf'),
+  });
+
+  if (!loaded) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>

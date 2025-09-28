@@ -70,21 +70,27 @@ export function createLoginStyles(colorScheme: 'light' | 'dark' | null | undefin
     container: {
       flex: 1,
       padding: spacing.xl,
-      backgroundColor: colors.background,
     },
     centeredContent: {
       flex: 1,
       justifyContent: 'center',
     },
-    
     // Header styles
     headerContainer: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: spacing.huge,
+      width: '100%',
+      alignItems: 'flex-start',
+      justifyContent: 'flex-start',
+      marginBottom: spacing.xxl,
+      rowGap: spacing.sm,
+    },
+    headerIconWrapper: {
+      alignSelf: 'flex-start',
+      borderRadius: 18,
+      padding: spacing.sm,
+      backgroundColor: colors.primary ,
     },
     headerTitle: {
-      marginBottom: spacing.sm,
+      marginBottom: spacing.xs,
     },
     
     // Error styles
