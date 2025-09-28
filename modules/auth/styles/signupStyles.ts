@@ -140,7 +140,6 @@ export function createSignupStyles(colorScheme: 'light' | 'dark' | null | undefi
     },
     signupContainer: {
       alignItems: 'center',
-      paddingTop: spacing.xl,
       paddingBottom: spacing.xl,
     },
     signupTextContainer: {

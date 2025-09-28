@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, KeyRound, CheckCircle } from 'lucide-react-native';
-import { View } from 'react-native';
+import { Mail, CheckCircle } from 'lucide-react-native';
+import { useColorScheme, View } from 'react-native';
 import * as yup from 'yup';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { View as UIView } from '@/components/ui/view';
+import Forgot from '@/assets/svg/forgot'
+import { theme } from '../styles/signupStyles';
 
 // Yup validation schema
 const forgotPasswordSchema = yup.object().shape({
@@ -67,6 +69,7 @@ export const ForgotPasswordBottomSheet: React.FC<ForgotPasswordBottomSheetProps>
 
   // Determine which error to show (validation error takes priority)
   const displayError = validationError || error;
+  const colors = theme.getThemeColors(useColorScheme());
 
   return (
     <BottomSheet
@@ -82,10 +85,9 @@ export const ForgotPasswordBottomSheet: React.FC<ForgotPasswordBottomSheetProps>
           marginBottom: 25,
         }}
       >
-        <KeyRound 
-          size={32} 
-          color="#6b7280" 
-          style={{ marginBottom: 15 }}
+        <Forgot 
+          width={150}
+          height={150}
         />
         <Text variant="heading" style={{ marginBottom: 10 }}>
           Forgot Password?
@@ -139,7 +141,7 @@ export const ForgotPasswordBottomSheet: React.FC<ForgotPasswordBottomSheetProps>
       )}
 
       <Button
-        style={{ marginTop: 20 }}
+        style={{ marginTop: 15 }}
         onPress={handleSubmit}
         disabled={loading}
       >
@@ -152,7 +154,7 @@ export const ForgotPasswordBottomSheet: React.FC<ForgotPasswordBottomSheetProps>
           style={{ textAlign: "center", fontSize: 15 }}
         >
           Remembered your password?{" "}
-          <Text variant="link" onPress={onClose}>
+          <Text style={{ color: `${colors.primary}`, fontSize:15 }} onPress={onClose}>
             Login
           </Text>
         </Text>
