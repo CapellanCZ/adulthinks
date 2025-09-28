@@ -1,4 +1,4 @@
-# AdultHinks - React Native Expo App
+# AdulThinks - React Native Expo App
 
 A comprehensive learning and community platform built with React Native, Expo, and Supabase.
 
