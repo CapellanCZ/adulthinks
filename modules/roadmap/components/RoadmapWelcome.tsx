@@ -6,6 +6,7 @@ import { View } from '@/components/ui/view'
 import { Button } from '@/components/ui/button'
 import { roadmapStyles } from '../styles/roadmapStyles'
 import { RoadmapWelcomeProps } from '../types'
+import Journey from '@/assets/svg/women-led'
 
 export function RoadmapWelcome({ colors, handlers }: RoadmapWelcomeProps) {
   const { textColor, textMuted, primaryColor } = colors
@@ -13,19 +14,17 @@ export function RoadmapWelcome({ colors, handlers }: RoadmapWelcomeProps) {
 
   return (
     <View style={roadmapStyles.welcomeContainer}>
-      <View style={[roadmapStyles.iconContainer, { backgroundColor: `${primaryColor}20` }]}>
-        <Sparkles size={48} color={primaryColor} />
-      </View>
-      
+      <Journey width={200} height={200} />
+
       <Text variant="heading" style={[roadmapStyles.subtitle, { color: textColor }]}>
         Start Your Journey
       </Text>
-      
+
       <Text variant="body" style={[roadmapStyles.description, { color: textMuted }]}>
-        AI will generate a personalized career path for you based on the degree or course field you choose. 
+        AI will generate a personalized career path for you based on the degree or course field you choose.
         Get step-by-step guidance tailored to your goals.
       </Text>
-      
+
       <Button
         onPress={handleGenerateRoadmap}
         style={roadmapStyles.generateButton}

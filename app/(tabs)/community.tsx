@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -17,6 +16,7 @@ import { HashtagFilter, CreatePostModal } from '../../modules/community/componen
 import { OptimizedPostsList } from '../../modules/community/components/OptimizedPostsList';
 import type { Post } from '../../modules/community/types';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { Text } from '@/components/ui/text';
 
 export default function CommunityScreen() {
   const styles = useCommunityStyles();
@@ -77,7 +77,7 @@ export default function CommunityScreen() {
     return (
       <SafeAreaView style={[styles.container]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Community</Text>
+          <Text variant="title" style={styles.headerTitle}>Community</Text>
           <Pressable
             style={({ pressed }) => [
               styles.createPostButton,
@@ -108,7 +108,7 @@ export default function CommunityScreen() {
     <SafeAreaView style={[styles.container]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
+        <Text variant='title' style={styles.headerTitle}>Community</Text>
         <Pressable
           style={({ pressed }) => [
             styles.createPostButton,

@@ -28,8 +28,6 @@ export function useCommunityStyles() {
       backgroundColor: isDark ? '#111111' : '#ffffff',
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '600',
       color: isDark ? '#ffffff' : '#000000',
     },
     createPostButton: {
