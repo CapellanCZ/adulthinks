@@ -5,15 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Sparkle } from 'lucide-react-native';
 import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
 import { FIELD_CATEGORY_OPTIONS, DEGREE_PROGRAM_OPTIONS } from "@/data/degree-programs";
+import { Text } from '@/components/ui/text';
 
-export function CreateRoadmapContent({ onGenerate }: { onGenerate?: () => void }) {
+export function CreateRoadmapContent({ 
+  onGenerate, 
+  isGenerating,
+  error,
+}: { 
+  onGenerate?: (category: string, course: string) => void | Promise<void>,
+  isGenerating?: boolean,
+  error?: string | null,
+}) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCourse, setSelectedCourse] = useState<string>('');
 
   const handleGenerate = () => {
-    if (onGenerate) {
-      onGenerate();
-    }
+    if (onGenerate && selectedCategory && selectedCourse) onGenerate(selectedCategory, selectedCourse);
   };
 
   return (
@@ -32,6 +39,7 @@ export function CreateRoadmapContent({ onGenerate }: { onGenerate?: () => void }
           searchPlaceholder='Search field categories...'
           modalTitle='Field Categories'
           options={FIELD_CATEGORY_OPTIONS}
+          disabled={isGenerating}
         />
 
         <Picker
@@ -42,19 +50,25 @@ export function CreateRoadmapContent({ onGenerate }: { onGenerate?: () => void }
           placeholder={selectedCategory ? 'Select a course...' : 'Select a category first'}
           searchPlaceholder='Search a course name or abbreviation...'
           modalTitle='Courses'
-          disabled={!selectedCategory}
+          disabled={!selectedCategory || isGenerating}
           options={selectedCategory ? DEGREE_PROGRAM_OPTIONS[selectedCategory] : []}
         />
       </View>
+
+      {error ? (
+        <View style={{ padding: 12, borderRadius: 8, backgroundColor: '#FF000014' }}>
+          <Text style={{ color: '#cc0000' }}>{error}</Text>
+        </View>
+      ) : null}
 
       <Button 
         icon={Sparkle} 
         variant='default' 
         size='lg'
         onPress={handleGenerate}
-        disabled={!selectedCategory || !selectedCourse}
+        disabled={!selectedCategory || !selectedCourse || !!isGenerating}
       >
-        Generate My Roadmap
+        {isGenerating ? 'Generating…' : 'Generate My Roadmap'}
       </Button>
     </View>
   );
@@ -70,14 +84,18 @@ export default function CreateRoadmapModal({
   isVisible,
   onClose,
   onGenerate,
+  isGenerating,
+  error,
 }: {
   isVisible: boolean;
   onClose: () => void;
-  onGenerate?: () => void;
+  onGenerate?: (category: string, course: string) => void | Promise<void>;
+  isGenerating?: boolean;
+  error?: string | null;
 }) {
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose} snapPoints={[0.3]}>
-      <CreateRoadmapContent onGenerate={onGenerate} />
+      <CreateRoadmapContent onGenerate={onGenerate} isGenerating={isGenerating} error={error} />
     </BottomSheet>
   );
 }

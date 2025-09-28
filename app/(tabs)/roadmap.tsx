@@ -8,9 +8,11 @@ import { RoadmapProgress } from '@/modules/roadmap/components/RoadmapProgress'
 import CreateRoadmapModal from '@/modules/roadmap/components/RoadmapModal'
 import { Text } from '@/components/ui/text'
 import { View } from '@/components/ui/view'
+import { useBottomTabOverflow } from '@/hooks/useBottomTabOverflow'
 
 export default function RoadmapScreen() {
   const { colors, handlers, modal, roadmapState } = useRoadmap()
+  const bottomTabHeight = useBottomTabOverflow()
 
   return (
     <SafeAreaView style={[roadmapStyles.container, { backgroundColor: colors.backgroundColor }]}>
@@ -25,6 +27,7 @@ export default function RoadmapScreen() {
         <RoadmapProgress 
           milestones={roadmapState.milestones} 
           onBack={handlers.handleBackToWelcome}
+          onProgressChange={handlers.handleProgressChange}
         />
       ) : (
         <RoadmapWelcome colors={colors} handlers={handlers} />
@@ -33,7 +36,13 @@ export default function RoadmapScreen() {
       {/* FAB - Only appears when progress screen is shown */}
       {roadmapState.hasGeneratedRoadmap && (
         <Pressable
-          style={[roadmapStyles.fab, { backgroundColor: colors.primaryColor }]}
+          style={[
+            roadmapStyles.fab, 
+            { 
+              backgroundColor: colors.primaryColor,
+              bottom: bottomTabHeight + 24, // Dynamic positioning based on actual tab height + spacing
+            }
+          ]}
           onPress={handlers.handleFabPress}
         >
           <Sparkle size={24} color="white" />
@@ -44,6 +53,8 @@ export default function RoadmapScreen() {
         isVisible={modal.isModalVisible} 
         onClose={handlers.handleCloseModal}
         onGenerate={handlers.handleCreateRoadmap}
+        isGenerating={modal.isGenerating}
+        error={modal.generationError}
       />
     </SafeAreaView>
   )

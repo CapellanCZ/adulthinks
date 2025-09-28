@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useThemeColor } from '@/hooks/useThemeColor'
 import ProgressSteps, { Title, Content } from '@joaosousa/react-native-progress-steps'
 import { ScrollView } from '@/components/ui/scroll-view'
 import { RoadmapStep } from '@/modules/roadmap/components/RoadmapStep'
 import { RoadmapProgressProps, Milestone } from '../types'
 
-export function RoadmapProgress({ milestones: initialMilestones, onBack }: RoadmapProgressProps) {
+export function RoadmapProgress({ milestones: initialMilestones, onBack, onProgressChange }: RoadmapProgressProps) {
   const textColor = useThemeColor({}, 'text')
   const accentPrimary = useThemeColor({}, 'primary')
   const borderColor = useThemeColor({}, 'border')
@@ -13,8 +13,13 @@ export function RoadmapProgress({ milestones: initialMilestones, onBack }: Roadm
   const [step, setStep] = useState<number>(0)
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
 
+  // Keep local milestones in sync with parent when it changes
+  useEffect(() => {
+    setMilestones(initialMilestones)
+  }, [initialMilestones])
+
   // Function to toggle task completion (immutable update, with auto-advance when milestone completed)
-  const toggleTask = (milestoneIndex: number, taskId: string): void => {
+  const toggleTask = useCallback((milestoneIndex: number, taskId: string): void => {
     setMilestones((prev) => {
       const updated = prev.map((ms, i) =>
         i !== milestoneIndex
@@ -33,9 +38,14 @@ export function RoadmapProgress({ milestones: initialMilestones, onBack }: Roadm
         setStep((s) => Math.min(milestoneIndex + 1, updated.length - 1))
       }
 
+      // Notify parent about progress change
+      if (onProgressChange) {
+        onProgressChange(updated)
+      }
+
       return updated
     })
-  }
+  }, [onProgressChange])
 
   // Function to handle next step
   const handleNext = useCallback(() => {
@@ -70,7 +80,7 @@ export function RoadmapProgress({ milestones: initialMilestones, onBack }: Roadm
           </Content>
         ),
       })),
-    [milestones, handleNext, handlePrev]
+    [milestones, handleNext, handlePrev, toggleTask]
   )
 
   const progressSummary = useMemo(() => {

@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/theme/theme-provider';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
+// import 'react-native-reanimated' // Removed to fix web compatibility;
 
 export default function RootLayout() {
   return (

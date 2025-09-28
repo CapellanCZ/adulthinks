@@ -11,7 +11,8 @@ export interface RoadmapHandlers {
   handleFabPress: () => void
   handleCloseModal: () => void
   handleBackToWelcome: () => void
-  handleCreateRoadmap: () => void
+  handleCreateRoadmap: (category: string, course: string) => Promise<void>
+  handleProgressChange: (milestones: Milestone[]) => Promise<void>
 }
 
 export interface RoadmapModal {
@@ -21,6 +22,7 @@ export interface RoadmapModal {
 export interface RoadmapState {
   hasGeneratedRoadmap: boolean
   milestones: Milestone[]
+  roadmapId?: string
 }
 
 // Roadmap data types
@@ -57,6 +59,7 @@ export interface RoadmapWelcomeProps {
 export interface RoadmapProgressProps {
   milestones: Milestone[]
   onBack: () => void
+  onProgressChange?: (milestones: Milestone[]) => void
 }
 
 export interface RoadmapScreenProps {

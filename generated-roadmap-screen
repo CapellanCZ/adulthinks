@@ -1,46 +1,45 @@
-// Define milestones data
+// Create 6 milestones
     const [milestones, setMilestones] = ([
         {
             id: "milestone-1",
-            title: "IT Fundamentals",
-            overview: "Learn the core of IT including hardware, software, networking, and databases. This builds your foundation for advanced skills.",
-            skills: ["Hardware basics", "Networking"],
-            timeframe: "Month 1-2",
+            title: "IT Fundamentals", //Milestone title
+            overview: "Learn the core of IT including hardware, software, networking, and databases. This builds your foundation for advanced skills.", //2 sentences of short overview about the milestone
+            skills: ["Hardware basics", "Networking"], //2 skills you'll gain from the milestone
             resources: [
                 {
                     type: "COURSE",
-                    title: "Introduction to Computer Science",
-                    description: "A beginner-friendly course that covers hardware, software, and data. It's designed to give you a strong IT foundation.",
-                    url: "https://example.com/course"
+                    title: "Introduction to Computer Science", //TITLE OF THE COURSE TYPE
+                    description: "A beginner-friendly course that covers hardware, software, and data. It's designed to give you a strong IT foundation.", //DESCRIPTION OF THE COURSE THIS SHOULD BE THE LENGTH OF A PARAGRAPH
+                    url: "https://example.com/course" //URL OF THE COURSE not example domain.
                 },
                 {
                     type: "ARTICLE",
-                    title: "What is Networking?",
-                    description: "A simple guide that explains how networks work. It introduces key terms like IP, routers, and connections.",
-                    url: "https://example.com/networking-article"
+                    title: "What is Networking?", //TITLE OF THE ARTICLE TYPE
+                    description: "A simple guide that explains how networks work. It introduces key terms like IP, routers, and connections.", //DESCRIPTION OF THE ARTICLE THIS SHOULD BE THE LENGTH OF A PARAGRAPH
+                    url: "https://example.com/networking-article" //URL OF THE ARTICLE not example domain.
                 }
             ],
             tasks: [
                 {
                     id: "task-1-1",
-                    title: "Watch a lecture on hardware components and summarize key functions",
-                    description: "Take notes on CPU, RAM, storage, and motherboard functions",
-                    duration: "1 hour",
-                    completed: false
+                    title: "Watch a lecture on hardware components and summarize key functions", //TITLE OF THE TASK
+                    description: "Take notes on CPU, RAM, storage, and motherboard functions", //1 SENTENCE DESCRIPTION OF THE TASK THIS SHOULD BE THE LENGTH OF A PARAGRAPH
+                    duration: "1 hour", //DURATION OF THE TASK
+                    completed: false //IS THE TASK COMPLETED?
                 },
                 {
                     id: "task-1-2",
-                    title: "Create a simple diagram of a basic computer network",
-                    description: "Include router, switches, devices, and connection types",
-                    duration: "1.5 hours",
-                    completed: false
+                    title: "Create a simple diagram of a basic computer network", //TITLE OF THE TASK
+                    description: "Include router, switches, devices, and connection types", //1 SENTENCE DESCRIPTION OF THE TASK THIS SHOULD BE THE LENGTH OF A PARAGRAPH
+                    duration: "1.5 hours", //DURATION OF THE TASK
+                    completed: false //IS THE TASK COMPLETED?
                 },
                 {
                     id: "task-1-3",
-                    title: "Read the article and list 5 key networking terms with definitions",
-                    description: "Focus on IP address, router, switch, LAN, and WAN",
-                    duration: "1 hour",
-                    completed: false
+                    title: "Read the article and list 5 key networking terms with definitions", //TITLE OF THE TASK
+                    description: "Focus on IP address, router, switch, LAN, and WAN", //1 SENTENCE DESCRIPTION OF THE TASK THIS SHOULD BE THE LENGTH OF A PARAGRAPH
+                    duration: "1 hour", //DURATION OF THE TASK
+                    completed: false //IS THE TASK COMPLETED?
                 }
             ]
         },
