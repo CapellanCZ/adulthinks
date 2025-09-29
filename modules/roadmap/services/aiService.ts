@@ -10,29 +10,7 @@ export async function generateRoadmap(
   console.log('Roadmap generation started:', { category, course })
   const milestones = await directGenerateClient(category, course, preferences)
 
-  // Persist generated tasks to Supabase if userId is provided
-  if (preferences?.userId) {
-    try {
-      const userId = preferences.userId
-      // Clear existing tasks for user to avoid duplicates
-      await supabase.from('roadmap').delete().eq('user_id', userId)
-      // Flatten tasks
-      const rows = milestones.flatMap(m =>
-        (m.tasks || []).map(t => ({
-          user_id: userId,
-          task: `${m.title}: ${t.title}`,
-          completed: Boolean(t.completed),
-        }))
-      )
-      if (rows.length > 0) {
-        const { error } = await supabase.from('roadmap').insert(rows)
-        if (error) console.error('Persist roadmap tasks error:', error.message)
-      }
-    } catch (e: any) {
-      console.error('Persist roadmap tasks exception:', e?.message || e)
-    }
-  }
-
+  // No direct persistence here; tasks will be saved with roadmap_id after createRoadmap
   return milestones
 }
 
@@ -283,37 +261,76 @@ async function callOpenRouterWithModel(category: string, course: string, model: 
 }
 
 async function enrichMilestone(ms: Milestone, options: { domains: string[], maxResources: number, searchKey?: string }) {
-  if (!options.searchKey) return
-  const baseQuery = `${ms.title} ${ms.skills?.[0] || ''}`.trim()
+  const exaKey = process.env.EXPO_PUBLIC_EXA_API_KEY
   const courseCandidates: MilestoneResource[] = []
   const articleCandidates: MilestoneResource[] = []
-  for (const site of options.domains) {
-    if (courseCandidates.length + articleCandidates.length >= options.maxResources) break
+  const combined: MilestoneResource[] = []
+  const query = `${ms.title} ${ms.overview || ''}`.trim()
+
+  // Try Exa first for high-quality results
+  if (exaKey) {
     try {
-      const results = await searchDomain(options.searchKey, baseQuery, site)
-      if (results.length > 0) {
-        const r = results[0]
-        if (r?.url && r?.title) {
-          const url = r.url as string
-          const isCourse = /coursera|edx|freecodecamp\.org\/learn|udacity|udemy/.test(site) || /course|learn|specialization/.test(url)
-          const res: MilestoneResource = {
-            type: isCourse ? 'COURSE' : 'ARTICLE',
-            title: r.title as string,
-            description: (r.snippet as string) || 'Relevant resource',
-            url,
-          }
-          if (isCourse) {
-            if (!courseCandidates.some(x => x.url === res.url)) courseCandidates.push(res)
-          } else {
-            if (!articleCandidates.some(x => x.url === res.url)) articleCandidates.push(res)
-          }
+      const resp = await fetch('https://api.exa.ai/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': exaKey },
+        body: JSON.stringify({
+          query,
+          text: true,
+          numResults: Math.max(2, Math.min(options.maxResources, 6)),
+          includeDomains: options.domains,
+        }),
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        const results = Array.isArray(data?.results) ? data.results : []
+        for (const r of results) {
+          if (!r?.url || !r?.title) continue
+          const url: string = r.url
+          const title: string = r.title
+          const desc: string = r.summary || r.text || 'Relevant resource'
+          const isCourse = /coursera|edx|freecodecamp\.org\/learn|udacity|udemy/.test(url) || /course|learn|specialization/.test(url)
+          const res: MilestoneResource = { type: isCourse ? 'COURSE' : 'ARTICLE', title, description: desc, url }
+          if (res.type === 'COURSE') { if (!courseCandidates.some(x => x.url === res.url)) courseCandidates.push(res) }
+          else { if (!articleCandidates.some(x => x.url === res.url)) articleCandidates.push(res) }
+          if (courseCandidates.length + articleCandidates.length >= options.maxResources) break
         }
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('Exa search failed, falling back:', e)
     }
   }
-  const combined: MilestoneResource[] = []
+
+  // Fallback to existing SearchAPI domain loop if Exa produced nothing
+  if (courseCandidates.length + articleCandidates.length === 0 && options.searchKey) {
+    const baseQuery = `${ms.title} ${ms.skills?.[0] || ''}`.trim()
+    for (const site of options.domains) {
+      if (courseCandidates.length + articleCandidates.length >= options.maxResources) break
+      try {
+        const results = await searchDomain(options.searchKey, baseQuery, site)
+        if (results.length > 0) {
+          const r = results[0]
+          if (r?.url && r?.title) {
+            const url = r.url as string
+            const isCourse = /coursera|edx|freecodecamp\.org\/learn|udacity|udemy/.test(site) || /course|learn|specialization/.test(url)
+            const res: MilestoneResource = {
+              type: isCourse ? 'COURSE' : 'ARTICLE',
+              title: r.title as string,
+              description: (r.snippet as string) || 'Relevant resource',
+              url,
+            }
+            if (isCourse) {
+              if (!courseCandidates.some(x => x.url === res.url)) courseCandidates.push(res)
+            } else {
+              if (!articleCandidates.some(x => x.url === res.url)) articleCandidates.push(res)
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   if (courseCandidates.length > 0) combined.push(courseCandidates[0])
   if (articleCandidates.length > 0) combined.push(articleCandidates[0])
   const pool = [...courseCandidates.slice(1), ...articleCandidates.slice(1)]

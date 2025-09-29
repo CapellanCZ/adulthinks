@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useThemeColor } from '@/hooks/useThemeColor'
 import { Milestone } from '../types'
 import { generateRoadmap } from '../services/aiService'
-import { createRoadmap, updateRoadmapProgress } from '../services/roadmapRepository'
+import { createRoadmap, updateRoadmapProgress, getLatestRoadmapByUser } from '../services/roadmapRepository'
 import { useCurrentUser } from '@/modules/community/hooks/useCurrentUser'
 import { supabase } from '@/lib/supabase'
 
@@ -16,12 +16,35 @@ export function useRoadmap() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const { userId } = useCurrentUser()
+  const loadedForUser = useRef<string | null>(null)
   
   const backgroundColor = useThemeColor({}, 'background')
   const borderColor = useThemeColor({}, 'border')
   const textColor = useThemeColor({}, 'text')
   const textMuted = useThemeColor({}, 'textMuted')
   const primaryColor = useThemeColor({}, 'primary')
+
+  // Restore latest roadmap when user logs in
+  useEffect(() => {
+    const restore = async () => {
+      if (!userId) {
+        // Reset when logged out
+        setHasGeneratedRoadmap(false)
+        setMilestones([])
+        setRoadmapId(undefined)
+        loadedForUser.current = null
+        return
+      }
+      if (loadedForUser.current === userId) return
+      const latest = await getLatestRoadmapByUser(userId)
+      if (latest && latest.id) {
+        // With normalized table, we restore roadmapId only
+        setRoadmapId(latest.id)
+        loadedForUser.current = userId
+      }
+    }
+    restore().catch(() => {})
+  }, [userId])
 
   const handleGenerateRoadmap = () => {
     setIsModalVisible(true)
@@ -39,16 +62,17 @@ export function useRoadmap() {
     setGenerationError(null)
     setIsGenerating(true)
     try {
-      // Generate with AI service + SearchAPI enrichment
+      // Generate with AI service + SearchAPI/Exa enrichment
       const aiMilestones = await generateRoadmap(category, course, {
         searchApiKey: process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY,
         aimlApiKey: process.env.EXPO_PUBLIC_AIMLAPI_KEY,
         openRouterKey: process.env.EXPO_PUBLIC_OPENROUTER_KEY,
         freeOnly: true,
         maxResources: 3,
+        userId: userId || undefined,
       })
 
-      // Persist to Supabase if user is logged in
+      // Persist one roadmap + tasks if user is logged in
       let newId: string | undefined
       if (userId) {
         const created = await createRoadmap(userId, category, course, aiMilestones)
