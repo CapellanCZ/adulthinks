@@ -1,59 +1,7 @@
 // supabase/functions/generate-roadmap/index.ts
-// Deno Edge Function to generate a roadmap using AI providers (OpenAI, Gemini fallback)
+// Deno Edge Function to generate a roadmap using AIMLAPI (ChatCompletion-compatible)
 // Expects JSON body: { category: string, course: string, preferences?: Record<string, any> }
-
-async function callGemini(category: string, course: string, preferences: Record<string, unknown> | undefined) {
-  const prefKey = preferences && typeof (preferences as any).geminiApiKey === 'string' ? ((preferences as any).geminiApiKey as string) : null
-  const apiKey = Deno.env.get('GEMINI_API_KEY') || prefKey
-  if (!apiKey) return null
-
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-1.5-flash-latest'
-  const body = {
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: `System Instruction:\n${systemPrompt()}\n\nCategory: ${category}\nCourse: ${course}\nPreferences: ${JSON.stringify(preferences || {})}`,
-          },
-        ],
-      },
-    ],
-    generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
-  }
-
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  )
-
-  if (!resp.ok) {
-    return null
-  }
-
-  const data = await resp.json()
-  const text =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-    data?.candidates?.[0]?.content?.parts?.[0]?.string ??
-    ''
-  if (!text) return null
-
-  try {
-    return JSON.parse(text)
-  } catch {
-    const match = typeof text === 'string' ? text.match(/\{[\s\S]*\}/) : null
-    if (match) {
-      try { return JSON.parse(match[0]) } catch {}
-    }
-    return null
-  }
-}
 // Returns: { milestones: Milestone[] }
-
 // Declare Deno for TypeScript tooling in non-Deno editors
 declare const Deno: any
 
@@ -184,33 +132,31 @@ Rules:
 - Output JSON: { "milestones": Milestone[] }.`
 }
 
-async function callOpenAI(category: string, course: string, preferences: Record<string, unknown> | undefined) {
-  const prefKey = preferences && typeof (preferences as any).openaiApiKey === 'string' ? (preferences as any).openaiApiKey as string : null
-  const apiKey = Deno.env.get('OPENAI_API_KEY') || prefKey
+async function callAIMLAPI(category: string, course: string, preferences: Record<string, unknown> | undefined) {
+  const prefKey = preferences && typeof (preferences as any).aimlApiKey === 'string' ? ((preferences as any).aimlApiKey as string) : null
+  const apiKey = Deno.env.get('AIMLAPI_KEY') || prefKey
   if (!apiKey) {
     return null
   }
 
-  const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini'
+  const model = Deno.env.get('AIMLAPI_MODEL') || 'openai/gpt-oss-20b'
   const messages = [
     { role: 'system', content: systemPrompt() },
     { role: 'user', content: `Category: ${category}\nCourse: ${course}\nPreferences: ${JSON.stringify(preferences || {})}` },
   ]
 
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+  const resp = await fetch('https://api.aimlapi.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.4,
-    }),
+    body: JSON.stringify({ model, messages, temperature: 0.4 }),
   })
 
   if (!resp.ok) {
+    const errorText = await resp.text()
+    console.error('AIMLAPI server error:', resp.status, errorText)
     return null
   }
 
@@ -222,7 +168,6 @@ async function callOpenAI(category: string, course: string, preferences: Record<
     const parsed = JSON.parse(content)
     return parsed
   } catch {
-    // Try to extract JSON if surrounded by text
     const match = content.match(/\{[\s\S]*\}/)
     if (match) {
       try { return JSON.parse(match[0]) } catch {}
@@ -269,13 +214,9 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Missing category or course' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Try OpenAI first, then Gemini fallback
-    const aiOpenAI = await callOpenAI(category, course, preferences)
-    let payload: { milestones: Milestone[] } | null = aiOpenAI ? ensureStructure(aiOpenAI) : null
-    if (!payload) {
-      const aiGemini = await callGemini(category, course, preferences)
-      if (aiGemini) payload = ensureStructure(aiGemini)
-    }
+    // Generate via AIMLAPI exclusively
+    const aiAIML = await callAIMLAPI(category, course, preferences)
+    let payload: { milestones: Milestone[] } | null = aiAIML ? ensureStructure(aiAIML) : null
     if (!payload) {
       return new Response(JSON.stringify({ error: 'AI generation failed' }), { status: 502, headers: { 'Content-Type': 'application/json' } })
     }

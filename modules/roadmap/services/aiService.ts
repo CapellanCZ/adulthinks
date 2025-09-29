@@ -5,38 +5,11 @@ import { Milestone } from '../types'
 export async function generateRoadmap(
   category: string,
   course: string,
-  preferences?: { searchApiKey?: string; openaiApiKey?: string; geminiApiKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
+  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
 ): Promise<Milestone[]> {
   console.log('Roadmap generation started:', { category, course })
-  
-  try {
-    console.log('Attempting Edge Function call...')
-    const { data, error } = await supabase.functions.invoke('generate-roadmap', {
-      body: { category, course, preferences },
-    })
-    
-    if (error) {
-      console.error('Edge Function error:', error)
-      throw new Error(error.message || 'Edge function failed')
-    }
-    
-    if (data && (data as any).error) {
-      console.error('Edge Function returned error:', (data as any).error)
-      throw new Error(String((data as any).error))
-    }
-    
-    if (!data || !Array.isArray((data as any).milestones)) {
-      console.error('Edge Function returned invalid data:', data)
-      throw new Error('AI generation returned no milestones')
-    }
-    
-    console.log('Edge Function success:', (data as any).milestones.length, 'milestones')
-    return data.milestones as Milestone[]
-  } catch (edgeErr) {
-    console.warn('Edge Function failed, falling back to client-side generation:', edgeErr)
-    // Fallback: generate directly from client using OpenAI + SearchAPI to unblock UX
-    return await directGenerateClient(category, course, preferences)
-  }
+  // Use client-side AIMLAPI/OpenRouter generation to unblock UX
+  return await directGenerateClient(category, course, preferences)
 }
 
 // ===== Client-side fallback (OpenAI + SearchAPI) =====
@@ -64,120 +37,112 @@ Rules:
 - Output JSON: { "milestones": Milestone[] }.`
 }
 
-async function callOpenAIDirect(category: string, course: string, openaiKey?: string): Promise<any | null> {
-  const key = openaiKey || process.env.EXPO_PUBLIC_OPENAI_API_KEY
+async function callAIMLAPIDirect(category: string, course: string, aimlKey?: string): Promise<any | null> {
+  const key = aimlKey || process.env.EXPO_PUBLIC_AIMLAPI_KEY
   if (!key) {
-    console.error('OpenAI API key not found in environment or preferences')
+    console.error('AIMLAPI API key not found in environment or preferences')
     return null
   }
-  
-  const model = 'gpt-4o-mini'
+
+  // Primary and fallback models
+  const primaryModel = process.env.EXPO_PUBLIC_AIMLAPI_MODEL || 'gpt-4o-mini'
+  const fallbackModel = 'chatgpt-4o-latest'
+
+  // Build messages
   const messages = [
     { role: 'system', content: systemPrompt() },
-    { role: 'user', content: `Category: ${category}\nCourse: ${course}\nPreferences: {}` },
+    { role: 'user', content: `Category: ${category}\nCourse: ${course}\nReturn strictly { "milestones": Milestone[] } as JSON. No commentary.` },
   ]
 
-  try {
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model, messages, temperature: 0.4 }),
-    })
-    
-    if (!resp.ok) {
-      const errorText = await resp.text()
-      console.error('OpenAI API error:', resp.status, errorText)
-      return null
-    }
-    
+  // Compose request body
+  const buildBody = (model: string) => ({
+    model,
+    messages,
+    temperature: 0.2,
+    max_tokens: 1800,
+    n: 1,
+    top_p: 0.9,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    response_format: { type: 'json_object' },
+  })
+
+  // Generic parser that handles provider variations
+  const parseResponse = async (resp: Response) => {
     const data = await resp.json()
-    const content = data?.choices?.[0]?.message?.content
-    if (!content) {
-      console.error('OpenAI returned no content')
+    const choice = data?.choices?.[0] ?? null
+    const msg = choice?.message ?? choice?.delta ?? null
+
+    const funcArgs = msg?.function_call?.arguments
+      || choice?.message?.tool_calls?.[0]?.function?.arguments
+    if (typeof funcArgs === 'string' && funcArgs.length > 0) {
+      try { return JSON.parse(funcArgs) } catch (e) { console.error('Failed to parse function/tool JSON:', e) }
+    }
+
+    let content: any = msg?.content || choice?.text || data?.output || data?.result
+    if (!content || (typeof content === 'string' && content.trim().length === 0)) {
+      console.error('AIMLAPI returned no content')
       return null
     }
-    
-    try {
-      return JSON.parse(content)
-    } catch {
+    if (typeof content !== 'string') {
+      if (content && typeof content === 'object') return content
+      content = String(content)
+    }
+    try { return JSON.parse(content) } catch {
+      const fenceMatch = content.match(/```json\s*([\s\S]*?)```/i) || content.match(/```\s*([\s\S]*?)```/i)
+      if (fenceMatch && fenceMatch[1]) { try { return JSON.parse(fenceMatch[1]) } catch {} }
       const match = content.match(/\{[\s\S]*\}/)
-      if (match) {
-        try { return JSON.parse(match[0]) } catch {}
-      }
-      console.error('Failed to parse OpenAI response as JSON')
+      if (match) { try { return JSON.parse(match[0]) } catch {} }
+      console.error('Failed to parse AIMLAPI response as JSON')
       return null
     }
-  } catch (error) {
-    console.error('OpenAI fetch error:', error)
-    return null
-  }
-}
-
-async function callGeminiDirect(category: string, course: string, geminiKey?: string): Promise<any | null> {
-  const key = geminiKey || process.env.EXPO_PUBLIC_GEMINI_API_KEY
-  if (!key) {
-    console.error('Gemini API key not found in environment or preferences')
-    return null
   }
 
-  const model = process.env.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-1.5-flash-latest'
-  const body = {
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: `System Instruction:\n${systemPrompt()}\n\nCategory: ${category}\nCourse: ${course}\nPreferences: {}`,
-          },
-        ],
-      },
-    ],
-    generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
-  }
-
-  try {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }
-    )
-
-    if (!resp.ok) {
-      const errorText = await resp.text()
-      console.error('Gemini API error:', resp.status, errorText)
-      return null
-    }
-
-    const data = await resp.json()
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      data?.candidates?.[0]?.content?.parts?.[0]?.string ??
-      ''
-    if (!text) {
-      console.error('Gemini returned no content')
-      return null
-    }
-
+  // Fetch with retry and longer timeout
+  const attempt = async (model: string, timeoutMs: number) => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
-      return JSON.parse(text)
-    } catch {
-      const match = typeof text === 'string' ? text.match(/\{[\s\S]*\}/) : null
-      if (match) {
-        try {
-          return JSON.parse(match[0])
-        } catch {}
+      const resp = await fetch('https://api.aimlapi.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify(buildBody(model)),
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      if (!resp.ok) {
+        const errorText = await resp.text()
+        console.error('AIMLAPI error:', resp.status, errorText)
+        return null
       }
-      console.error('Failed to parse Gemini response as JSON')
+      return await parseResponse(resp)
+    } catch (error: any) {
+      clearTimeout(timeout)
+      if (error?.name === 'AbortError') {
+        console.error('AIMLAPI fetch error: timeout/aborted')
+      } else {
+        console.error('AIMLAPI fetch error:', error)
+      }
       return null
     }
-  } catch (error) {
-    console.error('Gemini fetch error:', error)
-    return null
   }
+
+  // First attempt: primary model, 45s timeout
+  let result = await attempt(primaryModel, 45000)
+  if (!result) {
+    // Brief backoff then fallback attempt: smaller model, 45s timeout
+    await new Promise(res => setTimeout(res, 1500))
+    result = await attempt(fallbackModel, 45000)
+  }
+
+  return result
 }
+
+// Removed OpenAI and Gemini direct call implementations
 
 function ensureStructure(raw: any): { milestones: Milestone[] } | null {
   if (!raw || !Array.isArray(raw.milestones)) return null
@@ -215,6 +180,78 @@ async function searchDomain(apiKey: string, query: string, site: string): Promis
   const organic = Array.isArray(data?.organic_results) ? data.organic_results : []
   for (const r of organic) results.push({ title: r.title, link: r.link, url: r.link, snippet: r.snippet })
   return results
+}
+
+async function callOpenRouterDirect(category: string, course: string, key?: string): Promise<any | null> {
+  const orKey = key || process.env.EXPO_PUBLIC_OPENROUTER_KEY
+  if (!orKey) return null
+  const model = process.env.EXPO_PUBLIC_OPENROUTER_MODEL || 'openai/gpt-4o-mini'
+  const referer = process.env.EXPO_PUBLIC_OPENROUTER_REFERER || 'http://localhost'
+  const title = process.env.EXPO_PUBLIC_OPENROUTER_TITLE || 'Adulthinks'
+  console.log('OpenRouter: using model', model)
+
+  const messages = [
+    { role: 'system', content: systemPrompt() },
+    { role: 'user', content: `Category: ${category}\nCourse: ${course}\nReturn strictly { "milestones": Milestone[] } as JSON. No commentary.` },
+  ]
+
+  const body: any = {
+    model,
+    messages,
+    temperature: 0.2,
+    max_tokens: 2048,
+    stream: false,
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 60000)
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${orKey}`,
+        'HTTP-Referer': referer,
+        'X-Title': title,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (!resp.ok) {
+      const text = await resp.text()
+      console.error('OpenRouter error:', resp.status, text)
+      return null
+    }
+    const data = await resp.json()
+    const choice = data?.choices?.[0]
+    const msg = choice?.message ?? choice?.delta
+
+    const funcArgs = msg?.function_call?.arguments || choice?.message?.tool_calls?.[0]?.function?.arguments
+    if (typeof funcArgs === 'string' && funcArgs.length) {
+      try { return JSON.parse(funcArgs) } catch {}
+    }
+
+    let content: any = msg?.content || choice?.text || data?.output || data?.result
+    if (!content) return null
+    if (typeof content !== 'string') {
+      if (typeof content === 'object') return content
+      content = String(content)
+    }
+    try { return JSON.parse(content) } catch {
+      const fence = content.match(/```json\s*([\s\S]*?)```/i) || content.match(/```\s*([\s\S]*?)```/i)
+      if (fence && fence[1]) { try { return JSON.parse(fence[1]) } catch {} }
+      const objMatch = content.match(/\{[\s\S]*\}/)
+      if (objMatch) { try { return JSON.parse(objMatch[0]) } catch {} }
+      console.error('OpenRouter: Failed to parse JSON')
+      return null
+    }
+  } catch (e: any) {
+    clearTimeout(timeout)
+    console.error('OpenRouter fetch error:', e?.message || e)
+    return null
+  }
 }
 
 async function enrichMilestone(ms: Milestone, options: { domains: string[], maxResources: number, searchKey?: string }) {
@@ -259,49 +296,136 @@ async function enrichMilestone(ms: Milestone, options: { domains: string[], maxR
   ms.resources = combined
 }
 
+function localGenerateRoadmap(category: string, course: string): { milestones: Milestone[] } {
+  // Local static fallback removed per requirement: API-only generation
+  throw new Error('Local fallback disabled: API-only generation')
+}
+
 async function directGenerateClient(
   category: string,
   course: string,
-  preferences?: { searchApiKey?: string; openaiApiKey?: string; geminiApiKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
+  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
 ): Promise<Milestone[]> {
-  console.log('Client fallback: Attempting direct OpenAI generation')
-  console.log('OpenAI key available:', !!(preferences?.openaiApiKey || process.env.EXPO_PUBLIC_OPENAI_API_KEY))
+console.log('Client generation: Attempting API providers')
 
-  let ai = await callOpenAIDirect(category, course, preferences?.openaiApiKey)
-  if (!ai) {
-    console.warn('Client fallback: OpenAI failed, trying Gemini')
-    ai = await callGeminiDirect(category, course, preferences?.geminiApiKey)
-  }
-  if (!ai) {
-    console.error('Client fallback: Both OpenAI and Gemini calls failed')
-    throw new Error('AI generation failed (OpenAI and Gemini)')
-  }
-  
-  const payload = ensureStructure(ai)
-  if (!payload) {
-    console.error('Client fallback: Failed to parse AI response structure')
-    throw new Error('AI returned invalid milestone structure')
-  }
+// Prefer OpenRouter if available
+let ai = await callOpenRouterDirect(category, course, (preferences as any)?.openRouterKey)
+if (!ai) {
+ai = await callAIMLAPIDirect(category, course, (preferences as any)?.aimlApiKey)
+}
+if (!ai) {
+console.error('Client generation: All providers failed (OpenRouter/AIMLAPI)')
+throw new Error('AI generation failed (All providers)')
+}
 
-  console.log('Client fallback: Generated', payload.milestones.length, 'milestones')
+const payload = ensureStructure(ai)
+if (!payload) {
+console.error('Client generation: Failed to parse AI response structure')
+throw new Error('AI returned invalid milestone structure')
+}
 
-  const freeOnly = Boolean(preferences?.freeOnly)
-  const maxResources = Math.max(2, Math.min(5, Number(preferences?.maxResources) || 3))
-  const allowedDomains = Array.isArray(preferences?.allowedDomains)
-    ? (preferences!.allowedDomains as string[])
-    : (freeOnly
-        ? ['freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org']
-        : ['coursera.org', 'edx.org', 'freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org'])
+console.log('Client generation: Generated', payload.milestones.length, 'milestones')
 
-  const searchKey = preferences?.searchApiKey || process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY
-  if (searchKey) {
-    console.log('Client fallback: Enriching with SearchAPI')
-    for (const ms of payload.milestones) {
-      await enrichMilestone(ms as any, { domains: allowedDomains, maxResources, searchKey })
-    }
-  } else {
-    console.log('Client fallback: No SearchAPI key, skipping enrichment')
-  }
+const freeOnly = Boolean(preferences?.freeOnly)
+const maxResources = Math.max(2, Math.min(5, Number(preferences?.maxResources) || 3))
+const allowedDomains = Array.isArray(preferences?.allowedDomains)
+? (preferences!.allowedDomains as string[])
+: (freeOnly
+? ['freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org']
+: ['coursera.org', 'edx.org', 'freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org'])
 
-  return payload.milestones
+const searchKey = preferences?.searchApiKey || process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY
+if (searchKey) {
+console.log('Client generation: Enriching with SearchAPI')
+for (const ms of payload.milestones) {
+await enrichMilestone(ms as any, { domains: allowedDomains, maxResources, searchKey })
+;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
+;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
+}
+} else {
+console.log('Client generation: No SearchAPI key, skipping enrichment')
+for (const ms of payload.milestones) {
+;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
+;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
+}
+}
+
+return payload.milestones
+}
+
+// Helper functions restored (used by resource and skills post-processing)
+function trimText(str: string, max: number): string {
+if (!str) return ''
+const s = String(str).trim()
+return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + '…'
+}
+
+function ensureTwoConciseResources(resources: any[] | undefined): any[] {
+const COURSE_FALLBACK = {
+type: 'COURSE',
+title: 'Foundational Free Course',
+description: 'Introductory course covering core concepts.',
+url: 'https://www.freecodecamp.org/learn',
+}
+const ARTICLE_FALLBACK = {
+type: 'ARTICLE',
+title: 'Getting Started Guide',
+description: 'Concise guide to fundamentals and best practices.',
+url: 'https://developer.mozilla.org/en-US/docs/Learn',
+}
+
+const list = Array.isArray(resources) ? resources.filter(Boolean) : []
+const courses = list.filter(r => r?.type === 'COURSE')
+const articles = list.filter(r => r?.type === 'ARTICLE')
+
+const course = (courses[0] || COURSE_FALLBACK)
+const article = (articles[0] || ARTICLE_FALLBACK)
+
+const courseClean = {
+type: 'COURSE',
+title: trimText(course.title || 'Course', 60),
+description: trimText(course.description || 'Structured learning path.', 140),
+url: String(course.url || COURSE_FALLBACK.url),
+}
+const articleClean = {
+type: 'ARTICLE',
+title: trimText(article.title || 'Article', 60),
+description: trimText(article.description || 'Short, practical reading.', 140),
+url: String(article.url || ARTICLE_FALLBACK.url),
+}
+
+return [courseClean, articleClean]
+}
+
+function pickSkillsForTitle(title: string, course: string, category: string): string[] {
+const t = (title || '').toLowerCase()
+if (t.includes('foundation') || t.includes('orientation')) {
+return [`Basics of ${course}`, 'Study habits']
+}
+if (t.includes('core')) {
+return [`Core ${course} concepts`, 'Problem solving']
+}
+if (t.includes('applied project')) {
+return ['Project planning', 'Implementation']
+}
+if (t.includes('advanced')) {
+return [`Advanced ${course} topics`, 'Optimization']
+}
+if (t.includes('portfolio') || t.includes('career')) {
+return ['Portfolio building', 'Career readiness']
+}
+return [`Key ${course} skills`, 'Practical application']
+}
+
+function ensureTwoSkills(skills: any, title: string, course: string, category: string): string[] {
+const MAX_LEN = 40
+const list = Array.isArray(skills)
+? skills.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => trimText(s, MAX_LEN))
+: []
+if (list.length >= 2) return list.slice(0, 2)
+const defaults = pickSkillsForTitle(title, course, category).map(s => trimText(s, MAX_LEN))
+const merged = [...list, ...defaults].filter(Boolean)
+const unique: string[] = []
+for (const s of merged) { if (!unique.includes(s)) unique.push(s) }
+return unique.slice(0, 2)
 }

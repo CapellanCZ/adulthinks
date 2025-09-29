@@ -261,7 +261,6 @@ export function useCommunityStyles() {
     // Comments styles
     commentsContainer: {
       backgroundColor: isDark ? '#0a0a0a' : '#f8f9fa',
-      paddingHorizontal: 16,
       paddingVertical: 12,
     },
     commentItem: {

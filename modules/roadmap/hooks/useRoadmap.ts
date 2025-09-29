@@ -41,9 +41,10 @@ export function useRoadmap() {
       // Generate with AI service + SearchAPI enrichment
       const aiMilestones = await generateRoadmap(category, course, {
         searchApiKey: process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY,
-        openaiApiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
-        geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
-        maxResources: 4,
+        aimlApiKey: process.env.EXPO_PUBLIC_AIMLAPI_KEY,
+        openRouterKey: process.env.EXPO_PUBLIC_OPENROUTER_KEY,
+        freeOnly: true,
+        maxResources: 3,
       })
 
       // Persist to Supabase if user is logged in

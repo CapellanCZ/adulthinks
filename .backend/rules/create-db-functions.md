@@ -1,8 +1,4 @@
 ---
-trigger: manual
----
-
----
 # Specify the following for Cursor rules
 description: Guidelines for writing Supabase database functions
 alwaysApply: false
@@ -138,5 +134,3 @@ as $$
   select first_name || ' ' || last_name;
 $$;
 ```
-
-PS: Zustand for state management, Yup for input validation, & always seperate the ui and logic.
