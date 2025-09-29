@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useThemeColor } from '@/hooks/useThemeColor'
 import { Milestone } from '../types'
 import { generateRoadmap } from '../services/aiService'
 import { createRoadmap, updateRoadmapProgress } from '../services/roadmapRepository'
 import { useCurrentUser } from '@/modules/community/hooks/useCurrentUser'
+import { supabase } from '@/lib/supabase'
 
 // No local static sample data. Roadmaps are AI-generated and enriched server-side.
 
@@ -115,4 +116,110 @@ export function useRoadmap() {
       roadmapId,
     },
   }
+}
+
+export type RoadmapTask = {
+  id: string
+  user_id: string
+  task: string
+  completed: boolean
+  created_at: string
+  updated_at: string
+}
+
+export function useRoadmapTasks(userId?: string) {
+  const [tasks, setTasks] = useState<RoadmapTask[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+  const prevTasksRef = useRef<RoadmapTask[]>([])
+
+  // Load tasks
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!userId) return
+      setLoading(true)
+      setError(null)
+      const { data, error } = await supabase
+        .from('roadmap')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (!cancelled) {
+        if (error) setError(error.message)
+        else setTasks((data || []) as RoadmapTask[])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [userId])
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel('roadmap-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'roadmap' }, payload => {
+        // Basic sync: re-fetch on any change; for scale, apply granular updates
+        supabase
+          .from('roadmap')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .then(({ data, error }) => {
+            if (error) return
+            setTasks((data || []) as RoadmapTask[])
+          })
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  // Optimistic toggle
+  async function toggleTask(id: string, nextCompleted: boolean) {
+    setError(null)
+    prevTasksRef.current = tasks
+    setTasks(ts => ts.map(t => (t.id === id ? { ...t, completed: nextCompleted } : t)))
+    const { error } = await supabase
+      .from('roadmap')
+      .update({ completed: nextCompleted })
+      .eq('id', id)
+    if (error) {
+      // rollback
+      setTasks(prevTasksRef.current)
+      setError(error.message)
+    }
+  }
+
+  // Create task
+  async function addTask(text: string) {
+    setError(null)
+    const { data, error } = await supabase
+      .from('roadmap')
+      .insert({ user_id: userId, task: text, completed: false })
+      .select('*')
+      .single()
+    if (error) setError(error.message)
+    else setTasks(ts => [data as RoadmapTask, ...ts])
+  }
+
+  // Delete task
+  async function deleteTask(id: string) {
+    setError(null)
+    prevTasksRef.current = tasks
+    setTasks(ts => ts.filter(t => t.id !== id))
+    const { error } = await supabase
+      .from('roadmap')
+      .delete()
+      .eq('id', id)
+    if (error) {
+      setTasks(prevTasksRef.current)
+      setError(error.message)
+    }
+  }
+
+  return { tasks, loading, error, toggleTask, addTask, deleteTask }
 }

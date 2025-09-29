@@ -5,11 +5,35 @@ import { Milestone } from '../types'
 export async function generateRoadmap(
   category: string,
   course: string,
-  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
+  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[]; userId?: string }
 ): Promise<Milestone[]> {
   console.log('Roadmap generation started:', { category, course })
-  // Use client-side AIMLAPI/OpenRouter generation to unblock UX
-  return await directGenerateClient(category, course, preferences)
+  const milestones = await directGenerateClient(category, course, preferences)
+
+  // Persist generated tasks to Supabase if userId is provided
+  if (preferences?.userId) {
+    try {
+      const userId = preferences.userId
+      // Clear existing tasks for user to avoid duplicates
+      await supabase.from('roadmap').delete().eq('user_id', userId)
+      // Flatten tasks
+      const rows = milestones.flatMap(m =>
+        (m.tasks || []).map(t => ({
+          user_id: userId,
+          task: `${m.title}: ${t.title}`,
+          completed: Boolean(t.completed),
+        }))
+      )
+      if (rows.length > 0) {
+        const { error } = await supabase.from('roadmap').insert(rows)
+        if (error) console.error('Persist roadmap tasks error:', error.message)
+      }
+    } catch (e: any) {
+      console.error('Persist roadmap tasks exception:', e?.message || e)
+    }
+  }
+
+  return milestones
 }
 
 // ===== Client-side fallback (OpenAI + SearchAPI) =====
@@ -45,7 +69,7 @@ async function callAIMLAPIDirect(category: string, course: string, aimlKey?: str
   }
 
   // Primary and fallback models
-  const primaryModel = process.env.EXPO_PUBLIC_AIMLAPI_MODEL || 'gpt-4o-mini'
+  const primaryModel = process.env.EXPO_PUBLIC_AIMLAPI_MODEL || ''
   const fallbackModel = 'chatgpt-4o-latest'
 
   // Build messages
@@ -183,9 +207,13 @@ async function searchDomain(apiKey: string, query: string, site: string): Promis
 }
 
 async function callOpenRouterDirect(category: string, course: string, key?: string): Promise<any | null> {
+  const model = process.env.EXPO_PUBLIC_OPENROUTER_MODEL || process.env.EXPO_PUBLIC_OPENROUTER_MODEL_QWEN || 'qwen/qwen3-coder:free'
+  return await callOpenRouterWithModel(category, course, model, key)
+}
+
+async function callOpenRouterWithModel(category: string, course: string, model: string, key?: string): Promise<any | null> {
   const orKey = key || process.env.EXPO_PUBLIC_OPENROUTER_KEY
   if (!orKey) return null
-  const model = process.env.EXPO_PUBLIC_OPENROUTER_MODEL || 'openai/gpt-4o-mini'
   const referer = process.env.EXPO_PUBLIC_OPENROUTER_REFERER || 'http://localhost'
   const title = process.env.EXPO_PUBLIC_OPENROUTER_TITLE || 'Adulthinks'
   console.log('OpenRouter: using model', model)
@@ -306,51 +334,57 @@ async function directGenerateClient(
   course: string,
   preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
 ): Promise<Milestone[]> {
-console.log('Client generation: Attempting API providers')
+  console.log('Client generation: Attempting API providers')
 
-// Prefer OpenRouter if available
-let ai = await callOpenRouterDirect(category, course, (preferences as any)?.openRouterKey)
-if (!ai) {
-ai = await callAIMLAPIDirect(category, course, (preferences as any)?.aimlApiKey)
-}
-if (!ai) {
-console.error('Client generation: All providers failed (OpenRouter/AIMLAPI)')
-throw new Error('AI generation failed (All providers)')
-}
+  // Prefer OpenRouter primary model
+  let ai = await callOpenRouterDirect(category, course, (preferences as any)?.openRouterKey)
+  // Try Qwen model on OpenRouter as third provider if primary fails
+  if (!ai) {
+    const qwenModel = process.env.EXPO_PUBLIC_OPENROUTER_MODEL_QWEN || 'qwen/qwen3-coder:free'
+    ai = await callOpenRouterWithModel(category, course, qwenModel, (preferences as any)?.openRouterKey)
+  }
+  // Fallback to AIMLAPI
+  if (!ai) {
+    ai = await callAIMLAPIDirect(category, course, (preferences as any)?.aimlApiKey)
+  }
+  if (!ai) {
+    console.error('Client generation: All providers failed (OpenRouter-Qwen/AIMLAPI)')
+    throw new Error('AI generation failed (All providers)')
+  }
 
-const payload = ensureStructure(ai)
-if (!payload) {
-console.error('Client generation: Failed to parse AI response structure')
-throw new Error('AI returned invalid milestone structure')
-}
+  const payload = ensureStructure(ai)
+  if (!payload) {
+    console.error('Client generation: Failed to parse AI response structure')
+    throw new Error('AI returned invalid milestone structure')
+  }
 
-console.log('Client generation: Generated', payload.milestones.length, 'milestones')
+  console.log('Client generation: Generated', payload.milestones.length, 'milestones')
 
-const freeOnly = Boolean(preferences?.freeOnly)
-const maxResources = Math.max(2, Math.min(5, Number(preferences?.maxResources) || 3))
-const allowedDomains = Array.isArray(preferences?.allowedDomains)
-? (preferences!.allowedDomains as string[])
-: (freeOnly
-? ['freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org']
-: ['coursera.org', 'edx.org', 'freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org'])
+  const freeOnly = Boolean(preferences?.freeOnly)
+  const maxResources = Math.max(2, Math.min(5, Number(preferences?.maxResources) || 3))
+  const allowedDomains = Array.isArray(preferences?.allowedDomains)
+    ? (preferences!.allowedDomains as string[])
+    : (freeOnly
+      ? ['freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org']
+      : ['coursera.org', 'edx.org', 'freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org'])
 
-const searchKey = preferences?.searchApiKey || process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY
-if (searchKey) {
-console.log('Client generation: Enriching with SearchAPI')
-for (const ms of payload.milestones) {
-await enrichMilestone(ms as any, { domains: allowedDomains, maxResources, searchKey })
-;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
-;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
-}
-} else {
-console.log('Client generation: No SearchAPI key, skipping enrichment')
-for (const ms of payload.milestones) {
-;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
-;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
-}
-}
+  const searchKey = preferences?.searchApiKey || process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY
+  if (searchKey) {
+    console.log('Client generation: Enriching with SearchAPI')
+    for (const ms of payload.milestones) {
+      await enrichMilestone(ms as any, { domains: allowedDomains, maxResources, searchKey })
+      ;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
+      ;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
+    }
+  } else {
+    console.log('Client generation: No SearchAPI key, skipping enrichment')
+    for (const ms of payload.milestones) {
+      ;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
+      ;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
+    }
+  }
 
-return payload.milestones
+  return payload.milestones
 }
 
 // Helper functions restored (used by resource and skills post-processing)
