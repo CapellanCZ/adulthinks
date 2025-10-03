@@ -29,7 +29,7 @@ export async function createRoadmap(
   try {
     const { data, error } = await supabase
       .from('roadmaps')
-      .insert({
+      .upsert({
         user_id: userId,
         category,
         course,
@@ -39,7 +39,8 @@ export async function createRoadmap(
         progress_pct: stats.progressPct,
         is_completed: stats.isCompleted,
         milestones_snapshot: snapshot as any,
-      })
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,category,course' })
       .select('id')
       .single()
 

@@ -72,6 +72,10 @@ const lightColors = {
 
   // Indigo accent for system features
   indigo: '#5856D6',
+
+  // SVG colors
+  svgPrimary: '#3D9CFB',
+  svgSecondary: '#001434',
 };
 
 const darkColors = {
@@ -148,6 +152,10 @@ const darkColors = {
 
   // Indigo accent for system features
   indigo: '#5E5CE6',
+
+  // SVG colors
+  svgPrimary: '#64D2FF', // Lighter blue for dark mode
+  svgSecondary: '#E5E5E7', // Light gray for dark mode
 };
 
 export const Colors = {

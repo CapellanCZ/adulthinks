@@ -1,8 +1,6 @@
-   # AdultHinks - React Native Expo App
+   # AdulThinks - React Native Expo App
 
    A comprehensive learning and community platform built with React Native, Expo, and Supabase.
-
-   Reference link of the File Structure: https://medium.com/@nitishprasad/react-native-folder-structure-e9ceab3150f3
 
    ## 📁 Project Structure
 

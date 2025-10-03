@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { router } from "expo-router";
 import { useSignupFormStore } from "../store/useSignupFormStore";
-import { switchAuthProvider } from "../services/authServices";
 
 export interface UseSignupReturn {
   // Form state
@@ -83,7 +82,6 @@ export const useSignup = (): UseSignupReturn => {
   const handleGoogleSignup = useCallback(async () => {
     try {
       // Switch to Google provider and handle signup
-      switchAuthProvider("google");
       // TODO: Implement Google signup flow
       console.log("Google signup not yet implemented");
     } catch (error) {

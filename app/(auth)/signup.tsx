@@ -17,7 +17,7 @@ import {
   SocialLoginButtons,
   TermsAndConditions,
   SignupSuccessBottomSheet,
-} from "@/modules/auth/components/signup";
+} from "@/modules/auth/components";
 
 /**
  * SignupScreen Component

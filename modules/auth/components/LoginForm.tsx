@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { ForgotPasswordBottomSheet } from './ForgotPasswordBottomSheet';
-import { SocialLoginButtons } from '../../auth/components/signup/SocialLoginButtons';
+import { SocialLoginButtons } from '../../auth/components/SocialLoginButtons';
 import { useLoginStyles, theme } from '../styles/loginStyles';
 
 interface LoginFormProps {

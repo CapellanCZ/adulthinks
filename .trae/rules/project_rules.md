@@ -32,3 +32,7 @@
 - Use a consistent naming convention
 - Keep files small and focused
 - Place in module 
+9. Code Comments
+- Add comments to complex logic
+- Use JSDoc for function documentation
+- Keep comments up-to-date with code changes
