@@ -42,13 +42,13 @@ export const Text = forwardRef<RNText, TextProps>(
         case 'heading':
           return {
             ...baseStyle,
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: '800',
           };
         case 'title':
           return {
             ...baseStyle,
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: '700',
           };
         case 'subtitle':

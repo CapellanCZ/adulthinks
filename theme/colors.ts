@@ -1,6 +1,6 @@
 const lightColors = {
   // Base colors
-  background: '#FFFFFF',
+  background: '#F7F8FA',
   foreground: '#000000',
 
   // Card colors
@@ -33,7 +33,7 @@ const lightColors = {
 
   // Border and input
   border: '#E5E5E7',
-  input: '#e4e4e7',
+  input: '#F7F7F8',
   ring: '#007AFF',
 
   // Text colors

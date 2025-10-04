@@ -6,6 +6,7 @@ import { GovernmentIdCard } from '@/components/ui/government-id-card';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { PHILIPPINE_GOVERNMENT_IDS } from '@/data/philippine-government-ids';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 interface PopularSectionProps {
   onSeeAllPress: (section: 'popular' | 'trending') => void;
@@ -21,6 +22,7 @@ export const PopularSection: React.FC<PopularSectionProps> = ({
   maxItems = 3,
 }) => {
   const popularIds = PHILIPPINE_GOVERNMENT_IDS.slice(0, maxItems);
+  const primaryColor = useThemeColor({}, 'primary');
 
   const handleSeeAllPress = () => {
     onSeeAllPress('popular');
@@ -41,33 +43,16 @@ export const PopularSection: React.FC<PopularSectionProps> = ({
         <Pressable 
           onPress={handleSeeAllPress}
           accessibilityRole="button"
-          accessibilityLabel="See all popular government IDs"
-          accessibilityHint="Tap to view the complete list of popular government IDs"
+          accessibilityLabel="See all most applied government IDs"
+          accessibilityHint="Tap to view the complete list of most applied government IDs"
         >
-          <Text variant="link" style={styles.seeAllText}>
+          <Text style={[styles.seeAllText, { color: primaryColor }]}>
             See All
           </Text>
         </Pressable>
       </View>
 
-      <Carousel
-        showIndicators={true}
-        showArrows={true}
-        autoPlay={true}
-        loop={true}
-        style={styles.carousel}
-      >
-        {popularIds.map((govId, index) => (
-          <CarouselItem
-            key={govId.id}
-            style={styles.carouselItem}
-          >
-            <GovernmentIdCard 
-              data={govId}
-            />
-          </CarouselItem>
-        ))}
-      </Carousel>
+ 
     </View>
   );
 };
@@ -90,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   seeAllText: {
-    fontSize: 14,
+    // color provided dynamically using theme inside component
   },
   carousel: {
     top: -23,

@@ -1,4 +1,4 @@
-    import React from 'react';
+import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 
@@ -66,8 +66,8 @@ export const TrendingSection: React.FC<TrendingSectionProps> = ({
     const IconComponent = trend === 'up' ? TrendingUp : TrendingDown;
     return (
       <View style={styles.iconContainer}>
-        <IconComponent 
-          size={18} 
+        <IconComponent
+          size={18}
           color={primaryColor}
         />
       </View>
@@ -86,51 +86,7 @@ export const TrendingSection: React.FC<TrendingSectionProps> = ({
             {subtitle}
           </Text>
         </View>
-        <Pressable 
-          onPress={handleSeeAllPress}
-          accessibilityRole="button"
-          accessibilityLabel="See all trending topics"
-          accessibilityHint="Tap to view all trending topics and discussions"
-        >
-          <Text variant="link" style={styles.seeAllText}>
-            See All
-          </Text>
-        </Pressable>
       </View>
-
-      <Card 
-        style={styles.trendingCard}
-      >
-        <CardContent>
-          {trendingTopics.map((topic, idx) => (
-            <View key={topic.id} style={styles.topicContainer}>
-              <Pressable
-                style={styles.topicRow}
-                onPress={() => handleTopicPress(topic)}
-                accessibilityRole="button"
-                accessibilityLabel={`${topic.title}. ${topic.description}. ${topic.trend === 'up' ? 'Trending up' : 'Trending down'}`}
-                accessibilityHint="Tap to read more about this topic"
-              >
-                <TrendIcon trend={topic.trend} />
-                <View style={styles.topicContent}>
-                  <Text style={[styles.topicTitle, { color: trendingTextColor }]}>
-                    {topic.title}
-                  </Text>
-                  <Text
-                    variant="caption"
-                    style={styles.topicDescription}
-                  >
-                    {topic.description}
-                  </Text>
-                </View>
-              </Pressable>
-              {idx < trendingTopics.length - 1 && (
-                <Separator style={styles.separator} />
-              )}
-            </View>
-          ))}
-        </CardContent>
-      </Card>
     </View>
   );
 };
@@ -151,7 +107,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   seeAllText: {
-    fontSize: 14,
+    // color provided dynamically using theme inside component
   },
   trendingCard: {
     borderRadius: 10,

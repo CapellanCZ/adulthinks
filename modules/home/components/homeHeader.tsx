@@ -21,6 +21,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   userFallback = "AB",
 }) => {
   const primaryColor = useThemeColor({}, "primary");
+  const borderColor = useThemeColor({}, "border");
 
   return (
     <View style={styles.header}>
@@ -52,6 +53,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           style={({ pressed }) => [
             styles.notificationButton,
             {
+              borderColor: borderColor,
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.95 : 1 }],
               backgroundColor: pressed ? primaryColor + "10" : "transparent",
@@ -62,8 +64,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           accessibilityHint="Tap to view your notifications"
         >
           <Bell 
-            size={24} 
-            color={primaryColor}
+            size={20} 
           />
         </Pressable>
       </View>
@@ -101,8 +102,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   notificationButton: {
-    padding: 8,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 24,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 40,
