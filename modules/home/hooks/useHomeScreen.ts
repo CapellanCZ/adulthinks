@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { OptionType } from '@/components/ui/combobox';
 
@@ -22,12 +23,19 @@ export const useHomeScreen = () => {
 
   const handleSeeAllPress = useCallback((section: 'popular' | 'trending') => {
     try {
-      // TODO: Navigate to respective section screens
-      // - Popular IDs screen
-      // - Trending topics screen
-      console.log(`See All pressed for ${section} section`);
+      // Navigate to the Identification Process index screen
+      // Group segments are included to target the correct layout
+      router.push('/(id-process)');
     } catch (error) {
       console.error(`Error handling see all press for ${section}:`, error);
+    }
+  }, []);
+
+  const handleApplyNowPress = useCallback(() => {
+    try {
+      router.push('/(id-process)');
+    } catch (error) {
+      console.error('Error handling Apply Now press:', error);
     }
   }, []);
 
@@ -51,5 +59,6 @@ export const useHomeScreen = () => {
     setSelectedGovernmentId: handleGovernmentIdSelect,
     handleNotificationPress,
     handleSeeAllPress,
+    handleApplyNowPress,
   };
 };

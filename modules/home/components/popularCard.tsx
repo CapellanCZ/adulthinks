@@ -1,22 +1,26 @@
 import React from 'react';
-import { StyleSheet, Pressable } from 'react-native';
-import { ChevronRight, ChevronLeft, IdCard, EllipsisVertical, Fingerprint, Flag, Clock, Headset, FileCheck2 } from 'lucide-react-native';
+import { StyleSheet, Pressable, InteractionManager } from 'react-native';
+import { ChevronRight, ChevronLeft, IdCard, EllipsisVertical, Clock, Headset, FileCheck2 } from 'lucide-react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { BottomSheet, useBottomSheet } from '@/components/ui/bottom-sheet';
+import { ApplyNowAction } from './ApplyNowAction';
 import { Separator } from '@/components/ui/separator';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { Button } from '@/components/ui/button';
 
 interface PopularCardData {
   id: string;
   title: string;
   description: string;
   category?: string;
-  badges?: { label: string; variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' }[];
+  badges?: { label: string; variant?: 'default' }[];
   icon?: React.ComponentType<any>;
+  additionalInfo?: {
+    title: string;
+    content: string;
+  };
 }
 
 interface PopularCardProps {
@@ -24,6 +28,7 @@ interface PopularCardProps {
   onPress?: (data: PopularCardData) => void;
   showChevron?: boolean;
   containerStyle?: object;
+  onApplyNow?: () => void;
 }
 
 export type { PopularCardProps, PopularCardData };
@@ -33,6 +38,7 @@ export const PopularCard: React.FC<PopularCardProps> = React.memo(({
   onPress,
   showChevron = true,
   containerStyle,
+  onApplyNow,
 }) => {
   const borderColor = useThemeColor({}, 'border');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -45,6 +51,11 @@ export const PopularCard: React.FC<PopularCardProps> = React.memo(({
   const IconComponent = data.icon || IdCard;
   const { isVisible, open, close } = useBottomSheet();
 
+  // Derive dynamic labels from provided badges for modal details
+  const processingTimeLabel = data.badges?.find((b) => /quick|fast|days|hours/i.test(b.label))?.label;
+  const validityLabel = data.badges?.find((b) => /lifetime|years|valid/i.test(b.label))?.label;
+  const serviceTypeLabel = data.badges?.find((b) => /online|onsite|walk\s*in|appointment/i.test(b.label))?.label;
+
   const handlePress = () => {
     open();
     onPress?.(data);
@@ -52,6 +63,16 @@ export const PopularCard: React.FC<PopularCardProps> = React.memo(({
 
   const handleBackPress = () => {
     close();
+  };
+
+  const handleApplyNowPress = () => {
+    // Only trigger parent-provided callback; navigation handled by ApplyNowAction
+    // Keep UI separation: ApplyNowAction controls its own UI and navigation
+    if (onApplyNow) {
+      // Defer to ensure smooth UX after closing animation
+      close();
+      InteractionManager.runAfterInteractions(() => onApplyNow());
+    }
   };
 
   const renderModalHeader = () => (
@@ -182,7 +203,7 @@ export const PopularCard: React.FC<PopularCardProps> = React.memo(({
                 <Badge
                   key={index}
                   variant={badge.variant || 'secondary'}
-                  textStyle={[styles.badgeText, { color: textMutedColor }]}
+                  textStyle={{ color: textMutedColor, fontSize: 12 }}
                 >
                   {badge.label}
                 </Badge>
@@ -210,59 +231,70 @@ export const PopularCard: React.FC<PopularCardProps> = React.memo(({
           <View style={styles.modalScrollContent}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 10, marginBottom: 15 }}>
               <View>
-                <Text variant='title'>Philippine National ID</Text>
-                <Text variant='subtitle' style={{ color: textMutedColor }}>Primary</Text>
+                <Text variant='title'>{data.title}</Text>
+                {!!data.category && (
+                  <Text variant='subtitle' style={{ color: textMutedColor }}>{data.category}</Text>
+                )}
               </View>
             </View>
 
             <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 13 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
-                <Clock size={18} />
-                <Text variant='caption'>Processing Time:</Text>
-                <Text style={{ fontWeight: '500' }}>Quick</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
-                <FileCheck2 size={18} />
-                <Text variant='caption'>Validity:</Text>
-                <Text style={{ fontWeight: '500' }}>Lifetime</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
-                <Headset size={18} />
-                <Text variant='caption'>Service Type:</Text>
-                <Text style={{ fontWeight: '500' }}>Online & Onsite</Text>
-              </View>
+              {processingTimeLabel && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
+                  <Clock size={18} />
+                  <Text variant='caption'>Processing Time:</Text>
+                  <Text style={{ fontWeight: '500' }}>{processingTimeLabel}</Text>
+                </View>
+              )}
+              {validityLabel && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
+                  <FileCheck2 size={18} />
+                  <Text variant='caption'>Validity:</Text>
+                  <Text style={{ fontWeight: '500' }}>{validityLabel}</Text>
+                </View>
+              )}
+              {serviceTypeLabel && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
+                  <Headset size={18} />
+                  <Text variant='caption'>Service Type:</Text>
+                  <Text style={{ fontWeight: '500' }}>{serviceTypeLabel}</Text>
+                </View>
+              )}
             </View>
 
             <Separator style={{ marginVertical: 20 }} />
 
             <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 20 }}>
               <View style={{ gap: 10 }}>
-                <Text style={{ fontWeight: '600' }}>About National ID</Text>
+                <Text style={{ fontWeight: '600' }}>About {data.title}</Text>
                 <Text variant='caption'>
-                  The National ID is a valid proof of identity issued after registration.
-                  It can be used for government and private transactions.
-                  It comes in three formats: physical card, paper ePhilID, and digital ID.
-                  All formats have equal validity and function.
+                  {data.description}
                 </Text>
               </View>
 
-              <View style={{ gap: 10 }}>
-                <Text style={{ fontWeight: '600' }}>Minimum Age for Registration</Text>
-                <Text variant='caption'>
-                  Registration for the National ID is open to all Filipinos aged 1 and above.
-                  Ages 1–4 only need demographic data and a photo, linked to a parent or guardian.
-                  At age 5, full biometrics are collected.
-                  At age 15, biometrics are updated.
-                </Text>
-              </View>
+              {data.additionalInfo && (
+                <View style={{ gap: 10 }}>
+                  <Text style={{ fontWeight: '600' }}>{data.additionalInfo.title}</Text>
+                  <Text variant='caption'>
+                    {data.additionalInfo.content}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
           <View style={styles.modalButtonContainer}>
             <Separator style={{ marginBottom: 20 }} />
-            <Button style={styles.bottomButton}>
-              Apply Now
-            </Button>
+            <ApplyNowAction 
+              data={data}
+              style={styles.bottomButton}
+              beforePress={close}
+              extraParams={{
+                processingTime: 'Quick',
+                validity: 'Lifetime',
+                serviceType: 'Online & Onsite',
+              }}
+            />
           </View>
         </View>
       </BottomSheet>
@@ -334,9 +366,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 15,
     flexWrap: 'wrap',
-  },
-  badgeText: {
-    fontSize: 12,
   },
   // Modal Styles
   modalHeader: {

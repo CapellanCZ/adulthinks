@@ -101,8 +101,7 @@ const BottomSheetContent = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             marginHorizontal: 16,
-            marginTop: 16,
-            paddingBottom: 8,
+            marginTop: 5,
             minHeight: 40,
           }}
         >

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 
-import { Carousel, CarouselItem } from '@/components/ui/carousel';
-import { GovernmentIdCard } from '@/components/ui/government-id-card';
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { PHILIPPINE_GOVERNMENT_IDS } from '@/data/philippine-government-ids';
@@ -25,7 +24,7 @@ export const PopularSection: React.FC<PopularSectionProps> = ({
   const primaryColor = useThemeColor({}, 'primary');
 
   const handleSeeAllPress = () => {
-    onSeeAllPress('popular');
+    router.push('/(id-process)/list');
   };
 
   return (

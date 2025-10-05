@@ -29,6 +29,7 @@ export default React.memo(function HomeScreen() {
     setSelectedGovernmentId,
     handleNotificationPress,
     handleSeeAllPress,
+    handleApplyNowPress,
   } = useHomeScreen();
 
   // Fallback handlers to ensure interactivity even if hook does not provide them
@@ -49,13 +50,17 @@ export default React.memo(function HomeScreen() {
     id: 'national-id',
     title: 'Philippine National ID',
     category: 'Primary',
-    description: 'The Philippine National ID, known as PhilSys, is a government-issued identification that provides every Filipino with a single, secure, and valid proof of identity for easier access to services.',
+    description: 'The National ID is a valid proof of identity issued after registration. It can be used for government and private transactions. It comes in three formats: physical card, paper ePhilID, and digital ID. All formats have equal validity and function.',
     icon: IdCard,
     badges: [
-      { label: 'Free charge', variant: 'secondary' as const },
+      { label: 'Quick', variant: 'secondary' as const },
       { label: 'Lifetime', variant: 'secondary' as const },
-      { label: '1-3 days', variant: 'secondary' as const },
+      { label: 'Online/Onsite', variant: 'secondary' as const },
     ],
+    additionalInfo: {
+      title: 'Minimum Age for Registration',
+      content: 'Registration for the National ID is open to all Filipinos aged 1 and above. Ages 1–4 only need demographic data and a photo, linked to a parent or guardian. At age 5, full biometrics are collected. At age 15, biometrics are updated.'
+    }
   };
 
   const trendingCardsData = [
@@ -122,6 +127,7 @@ export default React.memo(function HomeScreen() {
           data={popularCardData}
           onPress={handlePopularItemPress}
           showChevron={true}
+          onApplyNow={handleApplyNowPress}
         />
       </View>
 
