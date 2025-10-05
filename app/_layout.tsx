@@ -14,7 +14,7 @@ export default function RootLayout() {
     Bingo: require('@/assets/fonts/Bingo-Regular.otf'),
   });
 
-  useEffect(() => { 
+  useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
     }
@@ -27,12 +27,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
+        <StatusBar style='auto' />
         <Stack>
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
           <Stack.Screen name='(auth)' options={{ headerShown: false }} />
+          <Stack.Screen name='(id-process)' options={{ headerShown: false }} />
           <Stack.Screen name='+not-found' />
         </Stack>
-        <StatusBar style='auto' />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

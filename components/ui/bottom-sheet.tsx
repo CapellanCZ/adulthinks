@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal,
   ScrollView,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   ViewStyle,
 } from 'react-native';
@@ -35,6 +36,10 @@ type BottomSheetContentProps = {
   cardColor: string;
   mutedColor: string;
   onHandlePress?: () => void;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  onLeftIconPress?: () => void;
+  onRightIconPress?: () => void;
 };
 
 // Component for the bottom sheet content
@@ -47,6 +52,10 @@ const BottomSheetContent = ({
   cardColor,
   mutedColor,
   onHandlePress,
+  leftIcon,
+  rightIcon,
+  onLeftIconPress,
+  onRightIconPress,
 }: BottomSheetContentProps) => {
   return (
     <Animated.View
@@ -84,18 +93,64 @@ const BottomSheetContent = ({
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Title */}
+      {/* Title with Icons */}
       {title && (
         <View
           style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             marginHorizontal: 16,
             marginTop: 16,
             paddingBottom: 8,
+            minHeight: 40,
           }}
         >
-          <Text variant='title' style={{ textAlign: 'center' }}>
-            {title}
-          </Text>
+          {/* Left Icon */}
+          <View style={{ width: 40, alignItems: 'flex-start' }}>
+            {leftIcon && onLeftIconPress ? (
+              <TouchableOpacity
+                onPress={onLeftIconPress}
+                style={{
+                  borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                activeOpacity={0.7}
+              >
+                {leftIcon}
+              </TouchableOpacity>
+            ) : (
+              leftIcon && <View style={{ padding: 8 }}>{leftIcon}</View>
+            )}
+          </View>
+
+          {/* Title */}
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text variant='subtitle' style={{ textAlign: 'center' }}>
+              {title}
+            </Text>
+          </View>
+
+          {/* Right Icon */}
+          <View style={{ width: 40, alignItems: 'flex-end' }}>
+            {rightIcon && onRightIconPress ? (
+              <TouchableOpacity
+                onPress={onRightIconPress}
+                style={{
+                  padding: 8,
+                  borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                activeOpacity={0.7}
+              >
+                {rightIcon}
+              </TouchableOpacity>
+            ) : (
+              rightIcon && <View>{rightIcon}</View>
+            )}
+          </View>
         </View>
       )}
 
@@ -121,6 +176,10 @@ type BottomSheetProps = {
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  onLeftIconPress?: () => void;
+  onRightIconPress?: () => void;
 };
 
 export function BottomSheet({
@@ -132,6 +191,10 @@ export function BottomSheet({
   title,
   style,
   disablePanGesture = false,
+  leftIcon,
+  rightIcon,
+  onLeftIconPress,
+  onRightIconPress,
 }: BottomSheetProps) {
   const cardColor = useThemeColor({}, 'card');
   const mutedColor = useThemeColor({}, 'muted');
@@ -307,6 +370,10 @@ export function BottomSheet({
               cardColor={cardColor}
               mutedColor={mutedColor}
               onHandlePress={() => runOnJS(handlePress)()}
+              leftIcon={leftIcon}
+              rightIcon={rightIcon}
+              onLeftIconPress={onLeftIconPress}
+              onRightIconPress={onRightIconPress}
             />
           ) : (
             <GestureDetector gesture={gesture}>
@@ -318,6 +385,10 @@ export function BottomSheet({
                 cardColor={cardColor}
                 mutedColor={mutedColor}
                 onHandlePress={() => runOnJS(handlePress)()}
+                leftIcon={leftIcon}
+                rightIcon={rightIcon}
+                onLeftIconPress={onLeftIconPress}
+                onRightIconPress={onRightIconPress}
               />
             </GestureDetector>
           )}

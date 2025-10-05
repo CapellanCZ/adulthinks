@@ -56,7 +56,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
               borderColor: borderColor,
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.95 : 1 }],
-              backgroundColor: pressed ? primaryColor + "10" : "transparent",
+              backgroundColor: pressed ? primaryColor + "10" : "white",
             },
           ]}
           accessibilityRole="button"
