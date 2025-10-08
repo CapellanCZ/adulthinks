@@ -11,3 +11,9 @@ node_modules
 expo-env.d.ts
 # @end expo-cli
 
+# Ignore Cursor workspace metadata
+.cursor/
+
+# Ignore Trae workspace metadata
+.trae/
+

@@ -1,482 +1,640 @@
-import { supabase } from '@/lib/supabase'
 import { Milestone } from '../types'
 
-// AI-backed generator via Supabase Edge Function using SearchAPI enrichment
+/**
+ * Gemini API-based AI service for roadmap generation
+ * - Uses schema-constrained JSON via generationConfig.responseMimeType = "application/json"
+ * - Preserves web search enrichment and post-processing
+ */
+
+// ===== Configuration & Types =====
+
+interface GeminiConfig {
+  apiKey: string
+  model: string
+}
+
+interface WebSearchConfig {
+  searchApiKey?: string
+  exaApiKey?: string
+  enabled: boolean
+}
+
+interface SearchResult {
+  title: string
+  url: string
+  snippet?: string
+}
+
+// ===== Main Export Function =====
+
+/**
+ * Generate a learning roadmap using Gemini with schema-constrained JSON output
+ * @param category - Learning category (e.g., "Technology", "Business")
+ * @param course - Specific course topic (e.g., "React Development", "Digital Marketing")
+ * @param preferences - Optional user preferences
+ * @returns Promise<Milestone[]> - Array of structured learning milestones
+ */
 export async function generateRoadmap(
   category: string,
   course: string,
-  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[]; userId?: string }
+  preferences?: { geminiKey?: string; openRouterKey?: string }
 ): Promise<Milestone[]> {
-  console.log('Roadmap generation started:', { category, course })
-  const milestones = await directGenerateClient(category, course, preferences)
-
-  // No direct persistence here; tasks will be saved with roadmap_id after createRoadmap
-  return milestones
+  console.log('🚀 Roadmap generation started (Gemini):', { category, course })
+  
+  try {
+    // Support either preferences.geminiKey or legacy preferences.openRouterKey
+    const preferenceKey = preferences?.geminiKey || preferences?.openRouterKey
+    const config = getGeminiConfig(preferenceKey)
+    const webSearchConfig = getWebSearchConfig()
+    
+    // Generate with preset configuration
+    const milestones = await generateWithModel(
+      category, 
+      course, 
+      config,
+      webSearchConfig
+    )
+    
+    if (milestones && milestones.length > 0) {
+      console.log('✅ Gemini generation successful:', milestones.length, 'milestones')
+      return milestones
+    }
+    
+    throw new Error('Gemini generation failed to produce milestones')
+    
+  } catch (error) {
+    console.error('❌ Roadmap generation failed:', error)
+    throw new Error(`Roadmap generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
-// ===== Client-side fallback (OpenAI + SearchAPI) =====
+// ===== Configuration Functions =====
 
-type MilestoneResource = { type: 'COURSE' | 'ARTICLE'; title: string; description: string; url: string }
-
-function systemPrompt(): string {
-  return `You are an expert curriculum designer. Generate a practical, step-by-step learning roadmap.
-Return strictly valid JSON following this TypeScript type. Do not include any extra commentary.
-
-interface MilestoneTask { id: string; title: string; description: string; duration: string; completed: boolean; }
-interface MilestoneResource { type: 'COURSE' | 'ARTICLE'; title: string; description: string; url: string; }
-interface Milestone { id: string; title: string; overview: string; skills: string[]; timeframe: string; resources: MilestoneResource[]; tasks: MilestoneTask[]; }
-
-Rules:
-- Produce exactly 6 milestones.
-- Each milestone must have 3 tasks, with completed=false and duration like "1 hour".
-- Each milestone must have at least 2 resources: one COURSE and one ARTICLE, with live URLs.
-- Resource descriptions should be a short paragraph.
-- Use only reputable sources (Coursera, freeCodeCamp, edX, Khan Academy, MDN, official docs, university pages).
-- Keep titles concise and actionable.
-- Overview should be 1-2 sentences.
-- skills array should have 2 short items.
-- timeframe in the form "Month N" or "Month N-M".
-- Output JSON: { "milestones": Milestone[] }.`
+function getGeminiConfig(preferenceKey?: string): GeminiConfig {
+  const apiKey = preferenceKey || 
+    process.env.EXPO_PUBLIC_GEMINI_API_KEY
+  
+  if (!apiKey) {
+    throw new Error('Missing Gemini API key. Set EXPO_PUBLIC_GEMINI_API_KEY and restart the app.')
+  }
+  
+  return {
+    apiKey,
+    model: process.env.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-2.0-flash'
+  }
 }
 
-async function callAIMLAPIDirect(category: string, course: string, aimlKey?: string): Promise<any | null> {
-  const key = aimlKey || process.env.EXPO_PUBLIC_AIMLAPI_KEY
-  if (!key) {
-    console.error('AIMLAPI API key not found in environment or preferences')
+function getWebSearchConfig(): WebSearchConfig {
+  return {
+    searchApiKey: process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY,
+    exaApiKey: process.env.EXPO_PUBLIC_EXA_API_KEY,
+    enabled: process.env.EXPO_PUBLIC_ENABLE_WEB_SEARCH === 'true'
+  }
+}
+
+// ===== Core Generation Logic =====
+
+async function generateWithModel(
+  category: string,
+  course: string,
+  config: GeminiConfig,
+  webSearchConfig: WebSearchConfig
+): Promise<Milestone[] | null> {
+  try {
+    console.log(`🎯 Generating with Gemini model: ${config.model}`)
+    
+    const response = await callGeminiGenerateContent(
+      category,
+      course,
+      config
+    )
+    
+    if (!response) {
+      console.warn(`❌ No response from Gemini with model: ${config.model}`)
+      return null
+    }
+    
+    const payload = ensureStructure(response)
+    if (!payload) {
+      console.warn(`❌ Invalid response structure from model: ${config.model}`)
+      return null
+    }
+    
+    // Enhance with web search if enabled
+    if (webSearchConfig.enabled && (webSearchConfig.searchApiKey || webSearchConfig.exaApiKey)) {
+      await enhanceWithWebSearch(payload.milestones, webSearchConfig, course)
+    }
+    
+    // Post-process for consistency
+    return postProcessMilestones(payload.milestones, course, category)
+    
+  } catch (error) {
+    console.error(`❌ Error with Gemini model ${config.model}:`, error)
     return null
   }
-
-  // Primary and fallback models
-  const primaryModel = process.env.EXPO_PUBLIC_AIMLAPI_MODEL || ''
-  const fallbackModel = 'chatgpt-4o-latest'
-
-  // Build messages
-  const messages = [
-    { role: 'system', content: systemPrompt() },
-    { role: 'user', content: `Category: ${category}\nCourse: ${course}\nReturn strictly { "milestones": Milestone[] } as JSON. No commentary.` },
-  ]
-
-  // Compose request body
-  const buildBody = (model: string) => ({
-    model,
-    messages,
-    temperature: 0.2,
-    max_tokens: 1800,
-    n: 1,
-    top_p: 0.9,
-    presence_penalty: 0,
-    frequency_penalty: 0,
-    response_format: { type: 'json_object' },
-  })
-
-  // Generic parser that handles provider variations
-  const parseResponse = async (resp: Response) => {
-    const data = await resp.json()
-    const choice = data?.choices?.[0] ?? null
-    const msg = choice?.message ?? choice?.delta ?? null
-
-    const funcArgs = msg?.function_call?.arguments
-      || choice?.message?.tool_calls?.[0]?.function?.arguments
-    if (typeof funcArgs === 'string' && funcArgs.length > 0) {
-      try { return JSON.parse(funcArgs) } catch (e) { console.error('Failed to parse function/tool JSON:', e) }
-    }
-
-    let content: any = msg?.content || choice?.text || data?.output || data?.result
-    if (!content || (typeof content === 'string' && content.trim().length === 0)) {
-      console.error('AIMLAPI returned no content')
-      return null
-    }
-    if (typeof content !== 'string') {
-      if (content && typeof content === 'object') return content
-      content = String(content)
-    }
-    try { return JSON.parse(content) } catch {
-      const fenceMatch = content.match(/```json\s*([\s\S]*?)```/i) || content.match(/```\s*([\s\S]*?)```/i)
-      if (fenceMatch && fenceMatch[1]) { try { return JSON.parse(fenceMatch[1]) } catch {} }
-      const match = content.match(/\{[\s\S]*\}/)
-      if (match) { try { return JSON.parse(match[0]) } catch {} }
-      console.error('Failed to parse AIMLAPI response as JSON')
-      return null
-    }
-  }
-
-  // Fetch with retry and longer timeout
-  const attempt = async (model: string, timeoutMs: number) => {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const resp = await fetch('https://api.aimlapi.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${key}`,
-        },
-        body: JSON.stringify(buildBody(model)),
-        signal: controller.signal,
-      })
-      clearTimeout(timeout)
-      if (!resp.ok) {
-        const errorText = await resp.text()
-        console.error('AIMLAPI error:', resp.status, errorText)
-        return null
-      }
-      return await parseResponse(resp)
-    } catch (error: any) {
-      clearTimeout(timeout)
-      if (error?.name === 'AbortError') {
-        console.error('AIMLAPI fetch error: timeout/aborted')
-      } else {
-        console.error('AIMLAPI fetch error:', error)
-      }
-      return null
-    }
-  }
-
-  // First attempt: primary model, 45s timeout
-  let result = await attempt(primaryModel, 45000)
-  if (!result) {
-    // Brief backoff then fallback attempt: smaller model, 45s timeout
-    await new Promise(res => setTimeout(res, 1500))
-    result = await attempt(fallbackModel, 45000)
-  }
-
-  return result
 }
 
-// Removed OpenAI and Gemini direct call implementations
-
-function ensureStructure(raw: any): { milestones: Milestone[] } | null {
-  if (!raw || !Array.isArray(raw.milestones)) return null
-  const milestones: Milestone[] = raw.milestones.map((m: any, i: number) => ({
-    id: m?.id || `milestone-${i + 1}`,
-    title: String(m?.title || `Milestone ${i + 1}`),
-    overview: String(m?.overview || ''),
-    skills: Array.isArray(m?.skills) ? m.skills.map((s: any) => String(s)).slice(0, 4) : [],
-    timeframe: String(m?.timeframe || `Month ${i + 1}`),
-    resources: Array.isArray(m?.resources) ? m.resources.map((r: any) => ({
-      type: r?.type === 'ARTICLE' ? 'ARTICLE' : 'COURSE',
-      title: String(r?.title || 'Resource'),
-      description: String(r?.description || ''),
-      url: String(r?.url || ''),
-    })) : [],
-    tasks: Array.isArray(m?.tasks) ? m.tasks.map((t: any, j: number) => ({
-      id: t?.id || `task-${i + 1}-${j + 1}`,
-      title: String(t?.title || 'Task'),
-      description: String(t?.description || ''),
-      duration: String(t?.duration || '1 hour'),
-      completed: Boolean(t?.completed ?? false),
-    })) : [],
-  }))
-  return { milestones }
-}
-
-type SearchApiResult = { title?: string; link?: string; url?: string; snippet?: string }
-
-async function searchDomain(apiKey: string, query: string, site: string): Promise<SearchApiResult[]> {
-  const url = `https://www.searchapi.io/api/v1/search?engine=google&q=${encodeURIComponent(query + ' site:' + site)}&api_key=${apiKey}`
-  const resp = await fetch(url)
-  if (!resp.ok) return []
-  const data = await resp.json()
-  const results: SearchApiResult[] = []
-  const organic = Array.isArray(data?.organic_results) ? data.organic_results : []
-  for (const r of organic) results.push({ title: r.title, link: r.link, url: r.link, snippet: r.snippet })
-  return results
-}
-
-async function callOpenRouterDirect(category: string, course: string, key?: string): Promise<any | null> {
-  const model = process.env.EXPO_PUBLIC_OPENROUTER_MODEL || process.env.EXPO_PUBLIC_OPENROUTER_MODEL_QWEN || 'qwen/qwen3-coder:free'
-  return await callOpenRouterWithModel(category, course, model, key)
-}
-
-async function callOpenRouterWithModel(category: string, course: string, model: string, key?: string): Promise<any | null> {
-  const orKey = key || process.env.EXPO_PUBLIC_OPENROUTER_KEY
-  if (!orKey) return null
-  const referer = process.env.EXPO_PUBLIC_OPENROUTER_REFERER || 'http://localhost'
-  const title = process.env.EXPO_PUBLIC_OPENROUTER_TITLE || 'Adulthinks'
-  console.log('OpenRouter: using model', model)
-
-  const messages = [
-    { role: 'system', content: systemPrompt() },
-    { role: 'user', content: `Category: ${category}\nCourse: ${course}\nReturn strictly { "milestones": Milestone[] } as JSON. No commentary.` },
-  ]
-
-  const body: any = {
-    model,
-    messages,
-    temperature: 0.2,
-    max_tokens: 2048,
-    stream: false,
-  }
-
+async function callGeminiGenerateContent(
+  category: string,
+  course: string,
+  config: GeminiConfig
+): Promise<any | null> {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 60000)
+  const timeout = setTimeout(() => controller.abort(), 120000) // 120s timeout
+  
+  const schema = {
+    type: 'object',
+    properties: {
+      milestones: {
+        type: 'array',
+        minItems: 4,
+        maxItems: 6,
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            title: { type: 'string' },
+            overview: { type: 'string' },
+            skills: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 2,
+              maxItems: 4
+            },
+            timeframe: { type: 'string' },
+            resources: {
+              type: 'array',
+              minItems: 2,
+              maxItems: 2,
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: ['COURSE', 'ARTICLE'] },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  url: { type: 'string' }
+                },
+                required: ['type', 'title', 'description', 'url'],
+              }
+            },
+            tasks: {
+              type: 'array',
+              minItems: 3,
+              maxItems: 3,
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  duration: { type: 'string' },
+                  completed: { type: 'boolean' }
+                },
+                required: ['id', 'title', 'description', 'duration', 'completed'],
+              }
+            }
+          },
+          required: ['id', 'title', 'overview', 'skills', 'timeframe', 'resources', 'tasks'],
+        }
+      }
+    },
+    required: ['milestones'],
+  }
+
+  const prompt = [
+    'You are an expert curriculum designer.',
+    'Return ONLY valid JSON. No markdown or code blocks.',
+    'Keep fields concise. Titles <= 60 chars; overview 1 sentence; resource descriptions <= 140 chars; task descriptions <= 100 chars.',
+    `Generate exactly 4 milestones for "${course}" in "${category}".`,
+    'Each milestone: 3 tasks (completed=false, duration like "1 hour"); 2 resources (1 COURSE, 1 ARTICLE) with live URLs.'
+  ].join(' ')
+
   try {
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent`
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${orKey}`,
-        'HTTP-Referer': referer,
-        'X-Title': title,
+        'X-goog-api-key': config.apiKey
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1200,
+          responseMimeType: 'application/json',
+          responseSchema: schema
+        }
+      }),
       signal: controller.signal,
     })
+
     clearTimeout(timeout)
-    if (!resp.ok) {
-      const text = await resp.text()
-      console.error('OpenRouter error:', resp.status, text)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`Gemini HTTP error (${response.status}):`, errorText)
+
+      // Fallback: retry once without schema but still JSON response
+      try {
+        const fbRes = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': config.apiKey
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: `Generate a learning roadmap for "${course}" in the "${category}" category. Return only valid JSON with exactly 6 milestones, each with 3 tasks and 2 resources (1 COURSE, 1 ARTICLE).` }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 1200,
+              responseMimeType: 'application/json'
+            }
+          }),
+          signal: controller.signal,
+        })
+
+        if (fbRes.ok) {
+          const fbData = await fbRes.json()
+          const fbText = fbData?.candidates?.[0]?.content?.parts?.[0]?.text
+          if (!fbText) {
+            console.error('No content in Gemini fallback response:', fbData)
+            return null
+          }
+          return parseJsonResponse(fbText)
+        } else {
+          const fbErr = await fbRes.text()
+          console.error('Gemini fallback error:', fbErr)
+        }
+      } catch (e) {
+        console.error('Gemini fallback request failed:', e)
+      }
+
       return null
     }
-    const data = await resp.json()
-    const choice = data?.choices?.[0]
-    const msg = choice?.message ?? choice?.delta
 
-    const funcArgs = msg?.function_call?.arguments || choice?.message?.tool_calls?.[0]?.function?.arguments
-    if (typeof funcArgs === 'string' && funcArgs.length) {
-      try { return JSON.parse(funcArgs) } catch {}
-    }
+    const data = await response.json()
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
 
-    let content: any = msg?.content || choice?.text || data?.output || data?.result
-    if (!content) return null
-    if (typeof content !== 'string') {
-      if (typeof content === 'object') return content
-      content = String(content)
-    }
-    try { return JSON.parse(content) } catch {
-      const fence = content.match(/```json\s*([\s\S]*?)```/i) || content.match(/```\s*([\s\S]*?)```/i)
-      if (fence && fence[1]) { try { return JSON.parse(fence[1]) } catch {} }
-      const objMatch = content.match(/\{[\s\S]*\}/)
-      if (objMatch) { try { return JSON.parse(objMatch[0]) } catch {} }
-      console.error('OpenRouter: Failed to parse JSON')
+    if (!text) {
+      console.error('No content in Gemini response:', data)
       return null
     }
-  } catch (e: any) {
+
+    return parseJsonResponse(text)
+
+  } catch (error) {
     clearTimeout(timeout)
-    console.error('OpenRouter fetch error:', e?.message || e)
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('Gemini request timed out')
+    } else {
+      console.error('Gemini request failed:', error)
+    }
     return null
   }
 }
 
-async function enrichMilestone(ms: Milestone, options: { domains: string[], maxResources: number, searchKey?: string }) {
-  const exaKey = process.env.EXPO_PUBLIC_EXA_API_KEY
-  const courseCandidates: MilestoneResource[] = []
-  const articleCandidates: MilestoneResource[] = []
-  const combined: MilestoneResource[] = []
-  const query = `${ms.title} ${ms.overview || ''}`.trim()
+// ===== Response Processing =====
 
-  // Try Exa first for high-quality results
-  if (exaKey) {
+function parseJsonResponse(content: any): any | null {
+  if (content && typeof content === 'object') {
+    return content
+  }
+  const str = String(content || '')
+  try {
+    return JSON.parse(str)
+  } catch {}
+
+  // Try to extract JSON from markdown code blocks
+  const jsonMatch = str.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (jsonMatch) {
     try {
-      const resp = await fetch('https://api.exa.ai/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': exaKey },
-        body: JSON.stringify({
-          query,
-          text: true,
-          numResults: Math.max(2, Math.min(options.maxResources, 6)),
-          includeDomains: options.domains,
-        }),
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        const results = Array.isArray(data?.results) ? data.results : []
-        for (const r of results) {
-          if (!r?.url || !r?.title) continue
-          const url: string = r.url
-          const title: string = r.title
-          const desc: string = r.summary || r.text || 'Relevant resource'
-          const isCourse = /coursera|edx|freecodecamp\.org\/learn|udacity|udemy/.test(url) || /course|learn|specialization/.test(url)
-          const res: MilestoneResource = { type: isCourse ? 'COURSE' : 'ARTICLE', title, description: desc, url }
-          if (res.type === 'COURSE') { if (!courseCandidates.some(x => x.url === res.url)) courseCandidates.push(res) }
-          else { if (!articleCandidates.some(x => x.url === res.url)) articleCandidates.push(res) }
-          if (courseCandidates.length + articleCandidates.length >= options.maxResources) break
-        }
-      }
-    } catch (e) {
-      console.warn('Exa search failed, falling back:', e)
-    }
+      return JSON.parse(jsonMatch[1])
+    } catch {}
+  }
+  
+  // Try to find JSON object in text
+  const objectMatch = str.match(/\{[\s\S]*\}/)
+  if (objectMatch) {
+    try {
+      return JSON.parse(objectMatch[0])
+    } catch {}
   }
 
-  // Fallback to existing SearchAPI domain loop if Exa produced nothing
-  if (courseCandidates.length + articleCandidates.length === 0 && options.searchKey) {
-    const baseQuery = `${ms.title} ${ms.skills?.[0] || ''}`.trim()
-    for (const site of options.domains) {
-      if (courseCandidates.length + articleCandidates.length >= options.maxResources) break
-      try {
-        const results = await searchDomain(options.searchKey, baseQuery, site)
-        if (results.length > 0) {
-          const r = results[0]
-          if (r?.url && r?.title) {
-            const url = r.url as string
-            const isCourse = /coursera|edx|freecodecamp\.org\/learn|udacity|udemy/.test(site) || /course|learn|specialization/.test(url)
-            const res: MilestoneResource = {
-              type: isCourse ? 'COURSE' : 'ARTICLE',
-              title: r.title as string,
-              description: (r.snippet as string) || 'Relevant resource',
-              url,
-            }
-            if (isCourse) {
-              if (!courseCandidates.some(x => x.url === res.url)) courseCandidates.push(res)
-            } else {
-              if (!articleCandidates.some(x => x.url === res.url)) articleCandidates.push(res)
-            }
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  if (courseCandidates.length > 0) combined.push(courseCandidates[0])
-  if (articleCandidates.length > 0) combined.push(articleCandidates[0])
-  const pool = [...courseCandidates.slice(1), ...articleCandidates.slice(1)]
-  for (const p of pool) {
-    if (combined.length >= options.maxResources) break
-    if (!combined.some(x => x.url === p.url)) combined.push(p)
-  }
-  ms.resources = combined
+  // Attempt repair on truncated/malformed JSON
+  const repaired = tryRepairJson(str)
+  if (repaired) return repaired
+  
+  console.error('Failed to parse JSON from content:', str.slice(0, 200))
+  return null
 }
 
-function localGenerateRoadmap(category: string, course: string): { milestones: Milestone[] } {
-  // Local static fallback removed per requirement: API-only generation
-  throw new Error('Local fallback disabled: API-only generation')
+function tryRepairJson(input: string): any | null {
+  try {
+    let s = input.trim()
+    // Remove code fences if present
+    s = s.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()
+
+    // Remove any leading/trailing noise outside the first {...}
+    const start = s.indexOf('{')
+    const end = s.lastIndexOf('}')
+    if (start !== -1 && end !== -1 && end > start) {
+      s = s.slice(start, end + 1)
+    }
+
+    // Unescape bracket artifacts like \[ and \]
+    s = s.replace(/\\([\[\]])/g, '$1')
+
+    // Remove trailing commas before } or ]
+    s = s.replace(/,\s*(\}|\])/g, '$1')
+
+    // Balance braces/brackets
+    const stack: string[] = []
+    for (const ch of s) {
+      if (ch === '{' || ch === '[') stack.push(ch)
+      else if (ch === '}' || ch === ']') stack.pop()
+    }
+    while (stack.length) {
+      const open = stack.pop()
+      s += open === '{' ? '}' : ']'
+    }
+
+    return JSON.parse(s)
+  } catch {
+    return null
+  }
 }
 
-async function directGenerateClient(
-  category: string,
-  course: string,
-  preferences?: { searchApiKey?: string; aimlApiKey?: string; openRouterKey?: string; freeOnly?: boolean; maxResources?: number; allowedDomains?: string[] }
-): Promise<Milestone[]> {
-  console.log('Client generation: Attempting API providers')
-
-  // Prefer OpenRouter primary model
-  let ai = await callOpenRouterDirect(category, course, (preferences as any)?.openRouterKey)
-  // Try Qwen model on OpenRouter as third provider if primary fails
-  if (!ai) {
-    const qwenModel = process.env.EXPO_PUBLIC_OPENROUTER_MODEL_QWEN || 'qwen/qwen3-coder:free'
-    ai = await callOpenRouterWithModel(category, course, qwenModel, (preferences as any)?.openRouterKey)
-  }
-  // Fallback to AIMLAPI
-  if (!ai) {
-    ai = await callAIMLAPIDirect(category, course, (preferences as any)?.aimlApiKey)
-  }
-  if (!ai) {
-    console.error('Client generation: All providers failed (OpenRouter-Qwen/AIMLAPI)')
-    throw new Error('AI generation failed (All providers)')
+function ensureStructure(raw: any): { milestones: Milestone[] } | null {
+  const arr = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.milestones) ? raw.milestones : null)
+  if (!arr) {
+    console.error('Invalid response structure:', raw)
+    return null
   }
 
-  const payload = ensureStructure(ai)
-  if (!payload) {
-    console.error('Client generation: Failed to parse AI response structure')
-    throw new Error('AI returned invalid milestone structure')
-  }
+  const milestones: Milestone[] = arr.map((m: any, i: number) => {
+    const title = String(m?.title || m?.milestone || `Milestone ${i + 1}`)
 
-  console.log('Client generation: Generated', payload.milestones.length, 'milestones')
+    const tasksRaw = Array.isArray(m?.tasks) ? m.tasks : []
+    const resourcesRaw = Array.isArray(m?.resources) ? m.resources : []
+    const skillsRaw = Array.isArray(m?.skills) ? m.skills : []
 
-  const freeOnly = Boolean(preferences?.freeOnly)
-  const maxResources = Math.max(2, Math.min(5, Number(preferences?.maxResources) || 3))
-  const allowedDomains = Array.isArray(preferences?.allowedDomains)
-    ? (preferences!.allowedDomains as string[])
-    : (freeOnly
-      ? ['freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org']
-      : ['coursera.org', 'edx.org', 'freecodecamp.org', 'developer.mozilla.org', 'khanacademy.org', 'docs.python.org'])
+    const tasks = tasksRaw.map((t: any, j: number) => {
+      if (typeof t === 'string') {
+        const tTitle = trimText(t, 60)
+        return {
+          id: `task-${i + 1}-${j + 1}`,
+          title: tTitle || `Task ${j + 1}`,
+          description: tTitle,
+          duration: '1 hour',
+          completed: false,
+        }
+      }
+      return {
+        id: t?.id || `task-${i + 1}-${j + 1}`,
+        title: String(t?.title || 'Task'),
+        description: String(t?.description || ''),
+        duration: String(t?.duration || '1 hour'),
+        completed: Boolean(t?.completed ?? false),
+      }
+    })
 
-  const searchKey = preferences?.searchApiKey || process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY
-  if (searchKey) {
-    console.log('Client generation: Enriching with SearchAPI')
-    for (const ms of payload.milestones) {
-      await enrichMilestone(ms as any, { domains: allowedDomains, maxResources, searchKey })
-      ;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
-      ;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
+    const resources = resourcesRaw.map((r: any) => {
+      if (typeof r === 'string') {
+        return {
+          type: 'ARTICLE' as const,
+          title: trimText(r, 60),
+          description: '',
+          url: '',
+        }
+      }
+      return {
+        type: r?.type === 'ARTICLE' ? 'ARTICLE' : 'COURSE',
+        title: String(r?.title || 'Resource'),
+        description: String(r?.description || ''),
+        url: String(r?.url || ''),
+      }
+    })
+
+    return {
+      id: m?.id || `milestone-${i + 1}`,
+      title,
+      overview: String(m?.overview || m?.description || ''),
+      skills: skillsRaw.map((s: any) => String(s)).slice(0, 4),
+      timeframe: String(m?.timeframe || m?.duration || `Month ${i + 1}`),
+      resources,
+      tasks,
     }
+  })
+
+  return { milestones }
+}
+
+// ===== Web Search Enhancement =====
+
+async function enhanceWithWebSearch(
+  milestones: Milestone[],
+  config: WebSearchConfig,
+  course: string
+): Promise<void> {
+  if (!config.enabled) return
+  
+  console.log('🔍 Enhancing roadmap with web search...')
+  
+  for (const milestone of milestones) {
+    try {
+      const searchQuery = `${milestone.title} ${course} tutorial guide`
+      const results = await performWebSearch(searchQuery, config)
+      
+      if (results.length > 0) {
+        // Add high-quality search results as resources
+        const enhancedResources = results.slice(0, 2).map(result => ({
+          type: 'ARTICLE' as const,
+          title: result.title,
+          description: result.snippet || 'Relevant learning resource',
+          url: result.url
+        }))
+        
+        milestone.resources = [...milestone.resources, ...enhancedResources]
+      }
+    } catch (error) {
+      console.warn(`Web search failed for milestone: ${milestone.title}`, error)
+    }
+  }
+}
+
+async function performWebSearch(query: string, config: WebSearchConfig): Promise<SearchResult[]> {
+  // Try SearchAPI first
+  if (config.searchApiKey) {
+    try {
+      const results = await searchWithSearchAPI(query, config.searchApiKey)
+      if (results.length > 0) return results
+    } catch (error) {
+      console.warn('SearchAPI failed, trying Exa...', error)
+    }
+  }
+  
+  // Fallback to Exa
+  if (config.exaApiKey) {
+    try {
+      return await searchWithExa(query, config.exaApiKey)
+    } catch (error) {
+      console.warn('Exa search failed:', error)
+    }
+  }
+  
+  return []
+}
+
+async function searchWithSearchAPI(query: string, apiKey: string): Promise<SearchResult[]> {
+  const response = await fetch(
+    `https://www.searchapi.io/api/v1/search?engine=google&q=${encodeURIComponent(query)}&api_key=${apiKey}&num=5`
+  )
+  
+  if (!response.ok) {
+    throw new Error(`SearchAPI error: ${response.status}`)
+  }
+  
+  const data = await response.json()
+  return (data.organic_results || []).map((result: any) => ({
+    title: result.title,
+    url: result.link,
+    snippet: result.snippet
+  }))
+}
+
+async function searchWithExa(query: string, apiKey: string): Promise<SearchResult[]> {
+  const response = await fetch('https://api.exa.ai/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      query,
+      numResults: 5,
+      includeDomains: ['freecodecamp.org', 'developer.mozilla.org', 'coursera.org', 'edx.org']
+    })
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Exa API error: ${response.status}`)
+  }
+  
+  const data = await response.json()
+  return (data.results || []).map((result: any) => ({
+    title: result.title,
+    url: result.url,
+    snippet: result.text?.slice(0, 200)
+  }))
+}
+
+// ===== Post-Processing =====
+
+function postProcessMilestones(milestones: Milestone[], course: string, category: string): Milestone[] {
+  return milestones.map(milestone => ({
+    ...milestone,
+    skills: ensureTwoSkills(milestone.skills, milestone.title, course, category),
+    resources: ensureQualityResources(milestone.resources)
+  }))
+}
+
+function ensureTwoSkills(skills: string[], title: string, course: string, category: string): string[] {
+  const MAX_LEN = 40
+  const validSkills = skills.filter(s => s && s.trim().length > 0).map(s => trimText(s, MAX_LEN))
+  
+  if (validSkills.length >= 2) return validSkills.slice(0, 2)
+  
+  // Generate contextual skills based on milestone title
+  const defaultSkills = generateContextualSkills(title, course, category)
+  const combined = [...validSkills, ...defaultSkills]
+  const unique = Array.from(new Set(combined))
+  
+  return unique.slice(0, 2)
+}
+
+function generateContextualSkills(title: string, course: string, category: string): string[] {
+  const t = title.toLowerCase()
+  
+  if (t.includes('foundation') || t.includes('basic')) {
+    return [`${course} fundamentals`, 'Learning methodology']
+  }
+  if (t.includes('advanced') || t.includes('expert')) {
+    return [`Advanced ${course}`, 'Problem solving']
+  }
+  if (t.includes('project') || t.includes('practice')) {
+    return ['Project development', 'Implementation skills']
+  }
+  if (t.includes('portfolio') || t.includes('career')) {
+    return ['Portfolio building', 'Professional skills']
+  }
+  
+  return [`${course} skills`, 'Practical application']
+}
+
+function ensureQualityResources(resources: any[]): any[] {
+  const FALLBACKS = {
+    COURSE: {
+      type: 'COURSE',
+      title: 'Comprehensive Learning Course',
+      description: 'Structured course covering essential concepts and practical applications.',
+      url: 'https://www.freecodecamp.org/learn'
+    },
+    ARTICLE: {
+      type: 'ARTICLE',
+      title: 'Essential Reading Guide',
+      description: 'Comprehensive guide covering key concepts and best practices.',
+      url: 'https://developer.mozilla.org/en-US/docs/Learn'
+    }
+  }
+  
+  const validResources = resources.filter(r => r && r.url && !r.url.includes('example.com'))
+  const courses = validResources.filter(r => r.type === 'COURSE')
+  const articles = validResources.filter(r => r.type === 'ARTICLE')
+  
+  const result = [] as any[]
+  
+  // Ensure at least one course
+  if (courses.length > 0) {
+    result.push(cleanResource(courses[0]))
   } else {
-    console.log('Client generation: No SearchAPI key, skipping enrichment')
-    for (const ms of payload.milestones) {
-      ;(ms as any).resources = ensureTwoConciseResources((ms as any).resources)
-      ;(ms as any).skills = ensureTwoSkills((ms as any).skills, (ms as any).title, course, category)
-    }
+    result.push(FALLBACKS.COURSE)
   }
-
-  return payload.milestones
+  
+  // Ensure at least one article
+  if (articles.length > 0) {
+    result.push(cleanResource(articles[0]))
+  } else {
+    result.push(FALLBACKS.ARTICLE)
+  }
+  
+  return result
 }
 
-// Helper functions restored (used by resource and skills post-processing)
+function cleanResource(resource: any): any {
+  return {
+    type: resource.type,
+    title: trimText(resource.title || 'Learning Resource', 60),
+    description: trimText(resource.description || 'Educational content for skill development.', 140),
+    url: resource.url
+  }
+}
+
 function trimText(str: string, max: number): string {
-if (!str) return ''
-const s = String(str).trim()
-return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + '…'
-}
-
-function ensureTwoConciseResources(resources: any[] | undefined): any[] {
-const COURSE_FALLBACK = {
-type: 'COURSE',
-title: 'Foundational Free Course',
-description: 'Introductory course covering core concepts.',
-url: 'https://www.freecodecamp.org/learn',
-}
-const ARTICLE_FALLBACK = {
-type: 'ARTICLE',
-title: 'Getting Started Guide',
-description: 'Concise guide to fundamentals and best practices.',
-url: 'https://developer.mozilla.org/en-US/docs/Learn',
-}
-
-const list = Array.isArray(resources) ? resources.filter(Boolean) : []
-const courses = list.filter(r => r?.type === 'COURSE')
-const articles = list.filter(r => r?.type === 'ARTICLE')
-
-const course = (courses[0] || COURSE_FALLBACK)
-const article = (articles[0] || ARTICLE_FALLBACK)
-
-const courseClean = {
-type: 'COURSE',
-title: trimText(course.title || 'Course', 60),
-description: trimText(course.description || 'Structured learning path.', 140),
-url: String(course.url || COURSE_FALLBACK.url),
-}
-const articleClean = {
-type: 'ARTICLE',
-title: trimText(article.title || 'Article', 60),
-description: trimText(article.description || 'Short, practical reading.', 140),
-url: String(article.url || ARTICLE_FALLBACK.url),
-}
-
-return [courseClean, articleClean]
-}
-
-function pickSkillsForTitle(title: string, course: string, category: string): string[] {
-const t = (title || '').toLowerCase()
-if (t.includes('foundation') || t.includes('orientation')) {
-return [`Basics of ${course}`, 'Study habits']
-}
-if (t.includes('core')) {
-return [`Core ${course} concepts`, 'Problem solving']
-}
-if (t.includes('applied project')) {
-return ['Project planning', 'Implementation']
-}
-if (t.includes('advanced')) {
-return [`Advanced ${course} topics`, 'Optimization']
-}
-if (t.includes('portfolio') || t.includes('career')) {
-return ['Portfolio building', 'Career readiness']
-}
-return [`Key ${course} skills`, 'Practical application']
-}
-
-function ensureTwoSkills(skills: any, title: string, course: string, category: string): string[] {
-const MAX_LEN = 40
-const list = Array.isArray(skills)
-? skills.filter(s => typeof s === 'string' && s.trim().length > 0).map(s => trimText(s, MAX_LEN))
-: []
-if (list.length >= 2) return list.slice(0, 2)
-const defaults = pickSkillsForTitle(title, course, category).map(s => trimText(s, MAX_LEN))
-const merged = [...list, ...defaults].filter(Boolean)
-const unique: string[] = []
-for (const s of merged) { if (!unique.includes(s)) unique.push(s) }
-return unique.slice(0, 2)
+  if (!str) return ''
+  const s = String(str).trim()
+  return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + '…'
 }

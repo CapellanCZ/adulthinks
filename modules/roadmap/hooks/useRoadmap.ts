@@ -6,8 +6,6 @@ import { createRoadmap, updateRoadmapProgress, getLatestRoadmapByUser } from '..
 import { useCurrentUser } from '@/modules/community/hooks/useCurrentUser'
 import { supabase } from '@/lib/supabase'
 
-// No local static sample data. Roadmaps are AI-generated and enriched server-side.
-
 export function useRoadmap() {
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [hasGeneratedRoadmap, setHasGeneratedRoadmap] = useState(false)
@@ -62,14 +60,11 @@ export function useRoadmap() {
     setGenerationError(null)
     setIsGenerating(true)
     try {
-      // Generate with AI service + SearchAPI/Exa enrichment
+      // Generate with AI service (OpenRouter/AI Router only)
       const aiMilestones = await generateRoadmap(category, course, {
-        searchApiKey: process.env.EXPO_PUBLIC_SEARCHAPI_API_KEY,
-        aimlApiKey: process.env.EXPO_PUBLIC_AIMLAPI_KEY,
-        openRouterKey: process.env.EXPO_PUBLIC_OPENROUTER_KEY,
-        freeOnly: true,
-        maxResources: 3,
-        userId: userId || undefined,
+        openRouterKey:
+          process.env.EXPO_PUBLIC_AI_ROUTER_KEY ||
+          process.env.EXPO_PUBLIC_OPENROUTER_KEY,
       })
 
       // Persist one roadmap + tasks if user is logged in
@@ -86,7 +81,7 @@ export function useRoadmap() {
       setIsModalVisible(false)
     } catch (err: any) {
       console.error('Roadmap generation failed:', err)
-      setGenerationError(err?.message || 'Failed to generate roadmap. Check your AI/SearchAPI setup and try again.')
+      setGenerationError(err?.message || 'Failed to generate roadmap. Check your AI Router configuration and try again.')
       // Keep modal open so the user can adjust and retry
     } finally {
       setIsGenerating(false)
