@@ -108,9 +108,7 @@ export const useProfileScreen = () => {
 
   const handleFAQ = useCallback(() => {
     try {
-      // TODO: Navigate to FAQ screen
-      // router.push('/faq');
-      console.log("FAQ pressed");
+      router.push('/profile/faq');
     } catch (error) {
       console.error('Error navigating to FAQ:', error);
     }
@@ -118,11 +116,9 @@ export const useProfileScreen = () => {
 
   const handlePrivacyPolicy = useCallback(() => {
     try {
-      // TODO: Navigate to privacy policy or open external URL
-      // Linking.openURL('https://example.com/privacy');
-      console.log("Privacy Policy pressed");
+      router.push('/profile/privacy');
     } catch (error) {
-      console.error('Error opening privacy policy:', error);
+      console.error('Error navigating to privacy policy:', error);
     }
   }, []);
 
