@@ -78,9 +78,7 @@ export const useProfileScreen = () => {
 
   const handleAddress = useCallback(() => {
     try {
-      // TODO: Navigate to address management screen
-      // router.push('/profile/address');
-      console.log("Address pressed");
+      router.push('/profile/address');
     } catch (error) {
       console.error('Error navigating to address:', error);
     }
@@ -88,9 +86,7 @@ export const useProfileScreen = () => {
 
   const handleChangePassword = useCallback(() => {
     try {
-      // TODO: Navigate to change password screen
-      // router.push('/profile/change-password');
-      console.log("Change Password pressed");
+      router.push('/profile/change-password');
     } catch (error) {
       console.error('Error navigating to change password:', error);
     }
