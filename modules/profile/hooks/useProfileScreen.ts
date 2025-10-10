@@ -1,5 +1,5 @@
 // hooks/useProfileScreen.ts
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import {
   CircleQuestionMark,
@@ -44,21 +44,23 @@ interface MenuSection {
 }
 
 export const useProfileScreen = () => {
-  // User data - in real app, this would come from auth context or API
+  // Local avatar state; in real app this would be persisted via API
+  const [avatarUri, setAvatarUri] = useState<string>(
+    'https://avatars.githubusercontent.com/u/99088394?v=4'
+  );
+
   const userProfile: UserProfile = useMemo(() => ({
     id: '1',
     name: "John Doe",
     email: "johndoe@gmail.com",
-    avatar: "https://avatars.githubusercontent.com/u/99088394?v=4",
+    avatar: avatarUri,
     fallback: "JD"
-  }), []);
+  }), [avatarUri]);
 
   // Navigation handlers
   const handleEditProfile = useCallback(() => {
     try {
-      // TODO: Navigate to edit profile screen
-      // router.push('/profile/edit');
-      console.log("Edit Profile pressed");
+      router.push('/profile/edit');
     } catch (error) {
       console.error('Error navigating to edit profile:', error);
     }
