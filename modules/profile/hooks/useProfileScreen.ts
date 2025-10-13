@@ -1,5 +1,5 @@
 // hooks/useProfileScreen.ts
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import {
   CircleQuestionMark,
@@ -44,21 +44,23 @@ interface MenuSection {
 }
 
 export const useProfileScreen = () => {
-  // User data - in real app, this would come from auth context or API
+  // Local avatar state; in real app this would be persisted via API
+  const [avatarUri, setAvatarUri] = useState<string>(
+    'https://avatars.githubusercontent.com/u/99088394?v=4'
+  );
+
   const userProfile: UserProfile = useMemo(() => ({
     id: '1',
     name: "John Doe",
     email: "johndoe@gmail.com",
-    avatar: "https://avatars.githubusercontent.com/u/99088394?v=4",
+    avatar: avatarUri,
     fallback: "JD"
-  }), []);
+  }), [avatarUri]);
 
   // Navigation handlers
   const handleEditProfile = useCallback(() => {
     try {
-      // TODO: Navigate to edit profile screen
-      // router.push('/profile/edit');
-      console.log("Edit Profile pressed");
+      router.push('/profile/edit');
     } catch (error) {
       console.error('Error navigating to edit profile:', error);
     }
@@ -76,9 +78,7 @@ export const useProfileScreen = () => {
 
   const handleAddress = useCallback(() => {
     try {
-      // TODO: Navigate to address management screen
-      // router.push('/profile/address');
-      console.log("Address pressed");
+      router.push('/profile/address');
     } catch (error) {
       console.error('Error navigating to address:', error);
     }
@@ -86,9 +86,7 @@ export const useProfileScreen = () => {
 
   const handleChangePassword = useCallback(() => {
     try {
-      // TODO: Navigate to change password screen
-      // router.push('/profile/change-password');
-      console.log("Change Password pressed");
+      router.push('/profile/change-password');
     } catch (error) {
       console.error('Error navigating to change password:', error);
     }
@@ -106,9 +104,7 @@ export const useProfileScreen = () => {
 
   const handleFAQ = useCallback(() => {
     try {
-      // TODO: Navigate to FAQ screen
-      // router.push('/faq');
-      console.log("FAQ pressed");
+      router.push('/profile/faq');
     } catch (error) {
       console.error('Error navigating to FAQ:', error);
     }
@@ -116,11 +112,9 @@ export const useProfileScreen = () => {
 
   const handlePrivacyPolicy = useCallback(() => {
     try {
-      // TODO: Navigate to privacy policy or open external URL
-      // Linking.openURL('https://example.com/privacy');
-      console.log("Privacy Policy pressed");
+      router.push('/profile/privacy');
     } catch (error) {
-      console.error('Error opening privacy policy:', error);
+      console.error('Error navigating to privacy policy:', error);
     }
   }, []);
 
